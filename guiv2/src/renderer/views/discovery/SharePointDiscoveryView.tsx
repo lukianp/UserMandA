@@ -1,6 +1,7 @@
 /**
  * SharePoint Discovery View
  * Comprehensive UI for discovering SharePoint Online/On-Premises environments
+ * Enhanced with rich results display matching the Discovered view style
  */
 
 import * as React from 'react';
@@ -16,14 +17,24 @@ import {
   Shield,
   Activity,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   AlertTriangle,
   Database,
   Lock,
   Users,
+  Globe,
+  List,
+  HardDrive,
+  Eye,
+  EyeOff,
+  Building2,
+  Share2,
+  LayoutGrid,
 } from 'lucide-react';
 
 import { useSharePointDiscoveryLogic } from '../../hooks/useSharePointDiscoveryLogic';
+import { useSharePointDiscoveredLogic } from '../../hooks/useSharePointDiscoveredLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
@@ -48,8 +59,8 @@ const SharePointDiscoveryView: React.FC = () => {
     saveAsTemplate,
     startDiscovery,
     cancelDiscovery,
-    sites,
-    lists,
+    sites: discoverySites,
+    lists: discoveryLists,
     permissions,
     siteFilter,
     setSiteFilter,
@@ -57,19 +68,92 @@ const SharePointDiscoveryView: React.FC = () => {
     setListFilter,
     permissionFilter,
     setPermissionFilter,
-    siteColumns,
-    listColumns,
+    siteColumns: discoveryColumns,
+    listColumns: discoveryListColumns,
     permissionColumns,
     exportData,
     selectedTab,
     setSelectedTab,
-    statistics,
+    statistics: discoveryStats,
     isCancelling,
     logs,
     showExecutionDialog,
     setShowExecutionDialog,
     clearLogs,
   } = useSharePointDiscoveryLogic();
+
+  // Use discovered logic for rich results display after discovery completes
+  const {
+    sites: discoveredSites,
+    lists: discoveredLists,
+    statistics: richStats,
+    siteColumns,
+    listColumns,
+    isLoading: discoveredLoading,
+    reloadData,
+  } = useSharePointDiscoveredLogic();
+
+  // After discovery completes, use LIVE result data (not CSV files)
+  // The result contains sites/lists extracted from the discovery response
+  const hasLiveResults = result && (result.sites?.length > 0 || result.lists?.length > 0);
+  const sites = hasLiveResults ? (result.sites || []) : (discoveredSites.length > 0 ? discoveredSites : discoverySites);
+  const lists = hasLiveResults ? (result.lists || []) : (discoveredLists.length > 0 ? discoveredLists : discoveryLists);
+
+  // v2.0.0 - New migration data types
+  const sharingLinks = hasLiveResults ? (result.sharingLinks || []) : [];
+  const contentTypes = hasLiveResults ? (result.contentTypes || []) : [];
+  const hubSites = hasLiveResults ? (result.hubSites || []) : [];
+  const siteAdmins = hasLiveResults ? (result.siteAdmins || []) : [];
+
+  // Calculate live statistics from discovery result
+  const liveStats = React.useMemo(() => {
+    if (!hasLiveResults) return null;
+    const liveSites = result.sites || [];
+    const liveLists = result.lists || [];
+    const liveContentTypes = result.contentTypes || [];
+    const liveSharingLinks = result.sharingLinks || [];
+    const liveSiteAdmins = result.siteAdmins || [];
+    const liveHubSites = result.hubSites || [];
+    const metadata = result.metadata || {};
+
+    // Calculate discovery success percentage based on collected data sources
+    const expectedSources = [
+      { name: 'Sites', hasData: liveSites.length > 0, weight: 25 },
+      { name: 'Lists', hasData: liveLists.length > 0, weight: 25 },
+      { name: 'ContentTypes', hasData: liveContentTypes.length > 0, weight: 15 },
+      { name: 'SharingLinks', hasData: true, weight: 10 },  // Absence is also information
+      { name: 'SiteAdmins', hasData: liveSiteAdmins.length > 0, weight: 15 },
+      { name: 'HubSites', hasData: true, weight: 10 },  // Absence is also information
+    ];
+    const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+    const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+    const discoverySuccessPercentage = Math.round((achievedWeight / totalWeight) * 100);
+    const dataSourcesReceivedCount = expectedSources.filter(s => s.hasData).length;
+
+    return {
+      totalSites: liveSites.length,
+      totalLists: liveLists.length,
+      totalItems: liveLists.reduce((sum: number, l: any) => sum + (l.ItemCount || 0), 0),
+      teamSites: liveSites.filter((s: any) => !s.IsPersonalSite && s.DisplayName).length,
+      personalSites: liveSites.filter((s: any) => s.IsPersonalSite).length,
+      documentLibraries: liveLists.filter((l: any) => l.ListType === 'DocumentLibrary').length,
+      genericLists: liveLists.filter((l: any) => l.ListType === 'List').length,
+      totalStorageUsedGB: liveSites.reduce((sum: number, s: any) => sum + (s.StorageUsedGB || 0), 0),
+      totalStorageQuotaGB: liveSites.reduce((sum: number, s: any) => sum + (s.StorageQuotaGB || 0), 0),
+      visibleLists: liveLists.filter((l: any) => !l.Hidden).length,
+      hiddenLists: liveLists.filter((l: any) => l.Hidden).length,
+      discoverySuccessPercentage,
+      dataSourcesReceivedCount,
+      dataSourcesTotal: expectedSources.length,
+      // From metadata
+      elapsedSeconds: metadata.ElapsedTimeSeconds || 0,
+      tenantName: metadata.TenantName || '',
+      executionId: result.executionId || metadata.ExecutionId || '',
+    };
+  }, [hasLiveResults, result]);
+
+  // Use live stats when available, otherwise CSV stats
+  const statistics = liveStats || (richStats.totalSites > 0 ? richStats : discoveryStats);
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="sharepoint-discovery-view" data-testid="sharepoint-discovery-view">
@@ -232,49 +316,91 @@ const SharePointDiscoveryView: React.FC = () => {
       {/* Results Section */}
       {result && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Summary Stats */}
+          {/* Rich Statistics Cards - 3 rows × 4 columns */}
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                icon={<FolderOpen className="w-5 h-5" />}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Row 1 */}
+              <DiscoverySuccessCard
+                percentage={richStats?.discoverySuccessPercentage || 100}
+                received={richStats?.dataSourcesReceivedCount || 2}
+                total={richStats?.dataSourcesTotal || 2}
+              />
+              <RichStatCard
+                icon={<Globe size={20} />}
                 label="Total Sites"
-                value={statistics?.totalSites || 0}
-                subValue={`${statistics?.hubSites || 0} hub sites`}
-                color="purple"
+                value={statistics?.totalSites || sites.length || 0}
+                gradient="from-blue-500 to-blue-600"
               />
-              <StatCard
-                icon={<Database className="w-5 h-5" />}
-                label="Total Storage"
-                value={formatBytes(statistics?.totalStorage || 0)}
-                subValue={`${(statistics?.averageStoragePerSite || 0).toFixed(2)} MB avg`}
-                color="blue"
+              <RichStatCard
+                icon={<List size={20} />}
+                label="Total Lists"
+                value={statistics?.totalLists || lists.length || 0}
+                gradient="from-purple-500 to-purple-600"
               />
-              <StatCard
-                icon={<FileText className="w-5 h-5" />}
-                label="Lists & Libraries"
-                value={statistics?.totalLists || 0}
-                subValue={`${(statistics?.totalDocuments || 0).toLocaleString()} documents`}
-                color="green"
+              <RichStatCard
+                icon={<FileText size={20} />}
+                label="Total Items"
+                value={richStats?.totalItems || 0}
+                gradient="from-green-500 to-green-600"
               />
-              <StatCard
-                icon={<Shield className="w-5 h-5" />}
-                label="Unique Permissions"
-                value={statistics?.uniquePermissions || 0}
-                subValue={
-                  (statistics?.uniquePermissions || 0) > 100
-                    ? <span className="text-orange-600 dark:text-orange-400 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" /> High complexity
-                      </span>
-                    : 'Good'
-                }
-                color="orange"
+
+              {/* Row 2 */}
+              <RichStatCard
+                icon={<Building2 size={20} />}
+                label="Team Sites"
+                value={richStats?.teamSites || 0}
+                gradient="from-indigo-500 to-indigo-600"
+              />
+              <RichStatCard
+                icon={<Users size={20} />}
+                label="Personal Sites"
+                value={richStats?.personalSites || 0}
+                gradient="from-cyan-500 to-cyan-600"
+              />
+              <RichStatCard
+                icon={<FolderOpen size={20} />}
+                label="Doc Libraries"
+                value={richStats?.documentLibraries || 0}
+                gradient="from-emerald-500 to-emerald-600"
+              />
+              <RichStatCard
+                icon={<LayoutGrid size={20} />}
+                label="Generic Lists"
+                value={richStats?.genericLists || 0}
+                gradient="from-orange-500 to-orange-600"
+              />
+
+              {/* Row 3 */}
+              <RichStatCard
+                icon={<HardDrive size={20} />}
+                label="Storage Used"
+                value={`${(richStats?.totalStorageUsedGB || 0).toFixed(0)} GB`}
+                gradient="from-rose-500 to-rose-600"
+              />
+              <RichStatCard
+                icon={<Database size={20} />}
+                label="Storage Quota"
+                value={`${((richStats?.totalStorageQuotaGB || 0) / 1024).toFixed(0)} TB`}
+                gradient="from-violet-500 to-violet-600"
+              />
+              <RichStatCard
+                icon={<Eye size={20} />}
+                label="Visible Lists"
+                value={richStats?.visibleLists || 0}
+                gradient="from-teal-500 to-teal-600"
+              />
+              <RichStatCard
+                icon={<EyeOff size={20} />}
+                label="Hidden Lists"
+                value={richStats?.hiddenLists || 0}
+                gradient="from-pink-500 to-pink-600"
               />
             </div>
           </div>
 
           {/* Tabs */}
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-1 px-4">
+            <div className="flex items-center gap-1 px-4 overflow-x-auto">
               <TabButton
                 active={selectedTab === 'overview'}
                 onClick={() => setSelectedTab('overview')}
@@ -285,7 +411,7 @@ const SharePointDiscoveryView: React.FC = () => {
                 active={selectedTab === 'sites'}
                 onClick={() => setSelectedTab('sites')}
                 label={`Sites (${sites?.length || 0})`}
-                icon={<FolderOpen className="w-4 h-4" />}
+                icon={<Globe className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'lists'}
@@ -298,6 +424,30 @@ const SharePointDiscoveryView: React.FC = () => {
                 onClick={() => setSelectedTab('permissions')}
                 label={`Permissions (${permissions?.length || 0})`}
                 icon={<Shield className="w-4 h-4" />}
+              />
+              <TabButton
+                active={selectedTab === 'contentTypes'}
+                onClick={() => setSelectedTab('contentTypes')}
+                label={`Content Types (${contentTypes?.length || 0})`}
+                icon={<Database className="w-4 h-4" />}
+              />
+              <TabButton
+                active={selectedTab === 'sharingLinks'}
+                onClick={() => setSelectedTab('sharingLinks')}
+                label={`Sharing (${sharingLinks?.length || 0})`}
+                icon={<Share2 className="w-4 h-4" />}
+              />
+              <TabButton
+                active={selectedTab === 'siteAdmins'}
+                onClick={() => setSelectedTab('siteAdmins')}
+                label={`Admins (${siteAdmins?.length || 0})`}
+                icon={<Users className="w-4 h-4" />}
+              />
+              <TabButton
+                active={selectedTab === 'hubSites'}
+                onClick={() => setSelectedTab('hubSites')}
+                label={`Hubs (${hubSites?.length || 0})`}
+                icon={<Building2 className="w-4 h-4" />}
               />
             </div>
           </div>
@@ -356,12 +506,12 @@ const SharePointDiscoveryView: React.FC = () => {
           {/* Content Area */}
           <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
             {selectedTab === 'overview' ? (
-              <OverviewTab result={result} />
+              <OverviewTab result={result} contentTypes={contentTypes} sharingLinks={sharingLinks} siteAdmins={siteAdmins} hubSites={hubSites} />
             ) : (
               <div className="h-full p-4">
                 <VirtualizedDataGrid
-                  data={(selectedTab === 'sites' ? sites : selectedTab === 'lists' ? lists : permissions) as any[]}
-                  columns={selectedTab === 'sites' ? siteColumns : selectedTab === 'lists' ? listColumns : permissionColumns}
+                  data={getTabData(selectedTab, { sites, lists, permissions, contentTypes, sharingLinks, siteAdmins, hubSites })}
+                  columns={getTabColumns(selectedTab, { siteColumns, listColumns, permissionColumns })}
                   loading={false}
                   enableExport
                   enableColumnReorder
@@ -419,6 +569,77 @@ const SharePointDiscoveryView: React.FC = () => {
 };
 
 /**
+ * Helper function to get data for current tab
+ */
+function getTabData(tab: string, data: {
+  sites: any[];
+  lists: any[];
+  permissions: any[];
+  contentTypes: any[];
+  sharingLinks: any[];
+  siteAdmins: any[];
+  hubSites: any[];
+}): any[] {
+  switch (tab) {
+    case 'sites': return data.sites;
+    case 'lists': return data.lists;
+    case 'permissions': return data.permissions;
+    case 'contentTypes': return data.contentTypes;
+    case 'sharingLinks': return data.sharingLinks;
+    case 'siteAdmins': return data.siteAdmins;
+    case 'hubSites': return data.hubSites;
+    default: return [];
+  }
+}
+
+/**
+ * Helper function to get columns for current tab
+ */
+function getTabColumns(tab: string, columns: {
+  siteColumns: any[];
+  listColumns: any[];
+  permissionColumns: any[];
+}): any[] {
+  switch (tab) {
+    case 'sites': return columns.siteColumns;
+    case 'lists': return columns.listColumns;
+    case 'permissions': return columns.permissionColumns;
+    case 'contentTypes': return [
+      { field: 'ContentTypeName', headerName: 'Content Type' },
+      { field: 'Description', headerName: 'Description' },
+      { field: 'Group', headerName: 'Group' },
+      { field: 'IsCustom', headerName: 'Custom' },
+      { field: 'ParentContentType', headerName: 'Parent Type' },
+      { field: 'SiteName', headerName: 'Site' },
+    ];
+    case 'sharingLinks': return [
+      { field: 'ResourceName', headerName: 'Resource' },
+      { field: 'LinkType', headerName: 'Link Type' },
+      { field: 'Scope', headerName: 'Scope' },
+      { field: 'SharedWith', headerName: 'Shared With' },
+      { field: 'HasPassword', headerName: 'Password Protected' },
+      { field: 'ExpirationDate', headerName: 'Expires' },
+      { field: 'SiteName', headerName: 'Site' },
+    ];
+    case 'siteAdmins': return [
+      { field: 'AdminDisplayName', headerName: 'Admin' },
+      { field: 'AdminEmail', headerName: 'Email' },
+      { field: 'AdminType', headerName: 'Type' },
+      { field: 'IsPrimaryAdmin', headerName: 'Primary' },
+      { field: 'SiteName', headerName: 'Site' },
+    ];
+    case 'hubSites': return [
+      { field: 'HubSiteName', headerName: 'Hub Name' },
+      { field: 'HubSiteUrl', headerName: 'URL' },
+      { field: 'Description', headerName: 'Description' },
+      { field: 'AssociatedSitesCount', headerName: 'Associated Sites' },
+      { field: 'IsRegistered', headerName: 'Registered' },
+    ];
+    default: return columns.siteColumns;
+  }
+}
+
+/**
  * Config Badge Component
  */
 interface ConfigBadgeProps {
@@ -441,7 +662,72 @@ const ConfigBadge: React.FC<ConfigBadgeProps> = ({ enabled, label, icon }) => (
 );
 
 /**
- * Stat Card Component
+ * Discovery Success Card Component - Shows data source collection success rate
+ */
+interface DiscoverySuccessCardProps {
+  percentage: number;
+  received: number;
+  total: number;
+}
+
+const DiscoverySuccessCard: React.FC<DiscoverySuccessCardProps> = ({ percentage, received, total }) => {
+  const getGradient = () => {
+    if (percentage >= 80) return 'from-green-500 to-emerald-600';
+    if (percentage >= 60) return 'from-yellow-500 to-amber-600';
+    if (percentage >= 40) return 'from-orange-500 to-orange-600';
+    return 'from-red-500 to-rose-600';
+  };
+
+  const getIcon = () => {
+    if (percentage >= 80) return CheckCircle2;
+    if (percentage >= 60) return AlertTriangle;
+    return XCircle;
+  };
+
+  const Icon = getIcon();
+
+  return (
+    <div className={`bg-gradient-to-br ${getGradient()} rounded-xl p-4 text-white shadow-lg`}>
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-white/20 rounded-lg">
+          <Icon size={24} />
+        </div>
+        <div>
+          <p className="text-xs opacity-80">Discovery Success</p>
+          <p className="text-2xl font-bold">{percentage}%</p>
+          <p className="text-xs opacity-80">{received}/{total} data sources</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Rich Stat Card Component - Gradient background style
+ */
+interface RichStatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  gradient: string;
+}
+
+const RichStatCard: React.FC<RichStatCardProps> = ({ icon, label, value, gradient }) => (
+  <div className={`bg-gradient-to-br ${gradient} rounded-xl p-4 text-white shadow-lg`}>
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-white/20 rounded-lg">
+        {icon}
+      </div>
+      <div>
+        <p className="text-xs opacity-80">{label}</p>
+        <p className="text-2xl font-bold">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * Stat Card Component (legacy)
  */
 interface StatCardProps {
   icon: React.ReactNode;
@@ -501,90 +787,191 @@ const TabButton: React.FC<TabButtonProps> = ({ active, onClick, label, icon }) =
 );
 
 /**
- * Overview Tab Component
+ * Overview Tab Component - Fixed to use actual discovery result structure
  */
 interface OverviewTabProps {
   result: any;
+  contentTypes?: any[];
+  sharingLinks?: any[];
+  siteAdmins?: any[];
+  hubSites?: any[];
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
-  <div className="p-6 space-y-6">
-    {/* Discovery Summary */}
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Discovery Summary</h3>
-      <div className="space-y-3">
-        <SummaryRow label="Discovery ID" value={result.id} />
-        <SummaryRow label="Configuration" value={result.configName} />
-        <SummaryRow label="Start Time" value={new Date(result.startTime).toLocaleString()} />
-        <SummaryRow label="End Time" value={result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'} />
-        <SummaryRow label="Duration" value={`${(result.duration / 1000).toFixed(2)} seconds`} />
-        <SummaryRow label="Objects per Second" value={(typeof result?.objectsPerSecond === 'number' ? result.objectsPerSecond : 0).toFixed(2)} />
-        <SummaryRow label="Status" value={<Badge variant={result.status === 'completed' ? 'success' : 'warning'}>{result.status}</Badge>} />
-      </div>
-    </div>
+const OverviewTab: React.FC<OverviewTabProps> = ({ result, contentTypes = [], sharingLinks = [], siteAdmins = [], hubSites = [] }) => {
+  // Extract metadata from nested structure
+  const rawData = result?.data || result;
+  const psResult = rawData?.data || rawData;
+  const metadata = result?.metadata || psResult?.Metadata || {};
 
-    {/* Site Statistics */}
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Site Statistics</h3>
-      <div className="space-y-3">
-        <SummaryRow label="Total Sites" value={result?.stats?.totalSites ?? 0} />
-        <SummaryRow label="Root Sites" value={result?.stats?.rootSites ?? 0} />
-        <SummaryRow label="Subsites" value={result?.stats?.subsites ?? 0} />
-        <SummaryRow label="Team Sites" value={result?.stats?.teamSites ?? 0} />
-        <SummaryRow label="Communication Sites" value={result?.stats?.communicationSites ?? 0} />
-        <SummaryRow label="Hub Sites" value={result?.stats?.hubSites ?? 0} />
-        <SummaryRow label="Average Site Size" value={formatBytes(result?.stats?.averageSiteSize ?? 0)} />
-      </div>
-    </div>
+  // Parse dates from /Date(timestamp)/ format
+  const parseDate = (dateStr: string | undefined): Date | null => {
+    if (!dateStr) return null;
+    const match = dateStr.match(/\/Date\((\d+)\)\//);
+    if (match) return new Date(parseInt(match[1]));
+    return new Date(dateStr);
+  };
 
-    {/* Storage Statistics */}
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Storage Statistics</h3>
-      <div className="space-y-3">
-        <SummaryRow label="Total Storage" value={formatBytes(result?.stats?.totalStorage ?? 0)} />
-        <SummaryRow label="Storage Used" value={formatBytes(result?.stats?.storageUsed ?? 0)} />
-        <SummaryRow label="Storage Available" value={formatBytes(result?.stats?.storageAvailable ?? 0)} />
-        <SummaryRow
-          label="Storage Utilization"
-          value={`${(((result?.stats?.storageUsed ?? 0) / (result?.stats?.totalStorage ?? 1)) * 100).toFixed(1)}%`}
-        />
-        <SummaryRow label="Total Documents" value={(result?.stats?.totalDocuments ?? 0).toLocaleString()} />
-        <SummaryRow label="Total Lists" value={(result?.stats?.totalLists ?? 0).toLocaleString()} />
-      </div>
-    </div>
+  const startTime = parseDate(psResult?.StartTime);
+  const endTime = parseDate(psResult?.EndTime);
 
-    {/* Permission Statistics */}
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Permission Statistics</h3>
-      <div className="space-y-3">
-        <SummaryRow label="Unique Permissions" value={result?.stats?.uniquePermissions ?? 0} />
-        <SummaryRow label="Sites with Unique Permissions" value={result?.stats?.sitesWithUniquePermissions ?? 0} />
-        <SummaryRow label="Items with Unique Permissions" value={result?.stats?.itemsWithUniquePermissions ?? 0} />
-        <SummaryRow label="External Users" value={result?.stats?.externalUsers ?? 0} />
-        <SummaryRow label="Externally Shared Items" value={result?.stats?.externallySharedItems ?? 0} />
-        <SummaryRow
-          label="Security Complexity"
-          value={
-            <Badge variant={(result?.stats?.uniquePermissions ?? 0) > 100 ? 'danger' : (result?.stats?.uniquePermissions ?? 0) > 50 ? 'warning' : 'success'}>
-              {(result?.stats?.uniquePermissions ?? 0) > 100 ? 'High' : (result?.stats?.uniquePermissions ?? 0) > 50 ? 'Moderate' : 'Low'}
-            </Badge>
-          }
-        />
-      </div>
-    </div>
+  // Calculate stats from live data
+  const liveSites = result?.sites || [];
+  const liveLists = result?.lists || [];
 
-    {/* External Sharing */}
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">External Sharing</h3>
-      <div className="space-y-3">
-        <SummaryRow label="Sites Allowing External Sharing" value={result?.stats?.sitesAllowingExternalSharing ?? 0} />
-        <SummaryRow label="Anonymous Links" value={result?.stats?.anonymousLinks ?? 0} />
-        <SummaryRow label="Guest Links" value={result?.stats?.guestLinks ?? 0} />
-        <SummaryRow label="Organization Links" value={result?.stats?.organizationLinks ?? 0} />
+  const totalRecords = liveSites.length + liveLists.length;
+  const elapsedSeconds = metadata?.ElapsedTimeSeconds || (endTime && startTime ? (endTime.getTime() - startTime.getTime()) / 1000 : 0);
+  const objectsPerSecond = elapsedSeconds > 0 ? totalRecords / elapsedSeconds : 0;
+
+  // Site breakdown
+  const teamSites = liveSites.filter((s: any) => !s.IsPersonalSite && s.DisplayName).length;
+  const personalSites = liveSites.filter((s: any) => s.IsPersonalSite).length;
+  const rootSites = liveSites.filter((s: any) => s.Root).length;
+  const communicationSites = liveSites.filter((s: any) => s.DisplayName?.toLowerCase().includes('communication')).length;
+
+  // Storage calculation
+  const totalStorageUsedGB = liveSites.reduce((sum: number, s: any) => sum + (s.StorageUsedGB || 0), 0);
+  const totalStorageQuotaGB = liveSites.reduce((sum: number, s: any) => sum + (s.StorageQuotaGB || 0), 0);
+
+  // List breakdown
+  const documentLibraries = liveLists.filter((l: any) => l.ListType === 'DocumentLibrary').length;
+  const genericLists = liveLists.filter((l: any) => l.ListType === 'List').length;
+  const visibleLists = liveLists.filter((l: any) => !l.Hidden).length;
+  const hiddenLists = liveLists.filter((l: any) => l.Hidden).length;
+  const totalItems = liveLists.reduce((sum: number, l: any) => sum + (l.ItemCount || 0), 0);
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Discovery Summary */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Discovery Summary</h3>
+        <div className="space-y-3">
+          <SummaryRow label="Execution ID" value={metadata?.ExecutionId || psResult?.ExecutionId || 'N/A'} />
+          <SummaryRow label="Tenant" value={metadata?.TenantName || 'Auto-detected'} />
+          <SummaryRow label="Authentication" value={metadata?.AuthenticationMethod || 'Direct Access Token'} />
+          <SummaryRow label="Start Time" value={startTime ? startTime.toLocaleString() : 'N/A'} />
+          <SummaryRow label="End Time" value={endTime ? endTime.toLocaleString() : 'N/A'} />
+          <SummaryRow label="Duration" value={`${elapsedSeconds.toFixed(2)} seconds`} />
+          <SummaryRow label="Total Records" value={totalRecords.toLocaleString()} />
+          <SummaryRow label="Objects per Second" value={objectsPerSecond.toFixed(2)} />
+          <SummaryRow label="Status" value={<Badge variant={result?.success !== false ? 'success' : 'warning'}>{result?.success !== false ? 'Completed' : 'Partial'}</Badge>} />
+        </div>
+      </div>
+
+      {/* Site Statistics */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Site Statistics</h3>
+        <div className="space-y-3">
+          <SummaryRow label="Total Sites" value={liveSites.length} />
+          <SummaryRow label="Root Sites" value={rootSites} />
+          <SummaryRow label="Team Sites" value={teamSites} />
+          <SummaryRow label="Personal Sites (OneDrive)" value={personalSites} />
+          <SummaryRow label="Communication Sites" value={communicationSites} />
+          <SummaryRow label="Average Site Size" value={liveSites.length > 0 ? `${(totalStorageUsedGB / liveSites.length).toFixed(2)} GB` : '0 GB'} />
+        </div>
+      </div>
+
+      {/* Storage Statistics */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Storage Statistics</h3>
+        <div className="space-y-3">
+          <SummaryRow label="Total Storage Quota" value={`${totalStorageQuotaGB.toFixed(2)} GB`} />
+          <SummaryRow label="Storage Used" value={`${totalStorageUsedGB.toFixed(2)} GB`} />
+          <SummaryRow label="Storage Available" value={`${(totalStorageQuotaGB - totalStorageUsedGB).toFixed(2)} GB`} />
+          <SummaryRow
+            label="Storage Utilization"
+            value={`${totalStorageQuotaGB > 0 ? ((totalStorageUsedGB / totalStorageQuotaGB) * 100).toFixed(1) : 0}%`}
+          />
+        </div>
+      </div>
+
+      {/* List & Library Statistics */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">List & Library Statistics</h3>
+        <div className="space-y-3">
+          <SummaryRow label="Total Lists & Libraries" value={liveLists.length} />
+          <SummaryRow label="Document Libraries" value={documentLibraries} />
+          <SummaryRow label="Generic Lists" value={genericLists} />
+          <SummaryRow label="Visible" value={visibleLists} />
+          <SummaryRow label="Hidden (System)" value={hiddenLists} />
+          <SummaryRow label="Total Items" value={totalItems.toLocaleString()} />
+        </div>
+      </div>
+
+      {/* Migration Readiness - v2.0.0 Enhanced with migration-critical data */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Migration Assessment</h3>
+        <div className="space-y-3">
+          <SummaryRow label="Sites to Migrate" value={liveSites.length} />
+          <SummaryRow label="Content to Migrate" value={`${liveLists.length} lists/libraries`} />
+          <SummaryRow label="Storage to Transfer" value={`${totalStorageUsedGB.toFixed(2)} GB`} />
+          <SummaryRow
+            label="Content Types"
+            value={contentTypes.length > 0
+              ? <Badge variant="success">{contentTypes.length} collected</Badge>
+              : <Badge variant="warning">Not Collected</Badge>
+            }
+          />
+          <SummaryRow
+            label="External Sharing Links"
+            value={sharingLinks.length > 0
+              ? <Badge variant="success">{sharingLinks.length} collected</Badge>
+              : <Badge variant="warning">Not Collected</Badge>
+            }
+          />
+          <SummaryRow
+            label="Site Collection Admins"
+            value={siteAdmins.length > 0
+              ? <Badge variant="success">{siteAdmins.length} collected</Badge>
+              : <Badge variant="warning">Not Collected</Badge>
+            }
+          />
+          <SummaryRow
+            label="Hub Sites"
+            value={hubSites.length > 0
+              ? <Badge variant="success">{hubSites.length} collected</Badge>
+              : <Badge variant="info">{hubSites.length} (none configured)</Badge>
+            }
+          />
+          <SummaryRow
+            label="Workflows"
+            value={<Badge variant="warning">Not Yet Supported</Badge>}
+          />
+        </div>
+
+        {/* Migration Readiness Score */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Migration Readiness Score:</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-lg font-bold ${
+                (liveSites.length > 0 && liveLists.length > 0 && contentTypes.length > 0 && siteAdmins.length > 0)
+                  ? 'text-green-600 dark:text-green-400'
+                  : (liveSites.length > 0 && liveLists.length > 0)
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-red-600 dark:text-red-400'
+              }`}>
+                {calculateMigrationReadiness(liveSites.length, liveLists.length, contentTypes.length, sharingLinks.length, siteAdmins.length, hubSites.length)}%
+              </span>
+              <Badge variant={
+                (liveSites.length > 0 && liveLists.length > 0 && contentTypes.length > 0 && siteAdmins.length > 0)
+                  ? 'success'
+                  : (liveSites.length > 0 && liveLists.length > 0)
+                    ? 'warning'
+                    : 'danger'
+              }>
+                {(liveSites.length > 0 && liveLists.length > 0 && contentTypes.length > 0 && siteAdmins.length > 0)
+                  ? 'Ready'
+                  : (liveSites.length > 0 && liveLists.length > 0)
+                    ? 'Partial'
+                    : 'Incomplete'}
+              </Badge>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * Summary Row Component
@@ -600,6 +987,58 @@ const SummaryRow: React.FC<SummaryRowProps> = ({ label, value }) => (
     <span className="text-sm text-gray-900 dark:text-gray-100">{value}</span>
   </div>
 );
+
+/**
+ * Calculate migration readiness score based on collected data
+ * Weighted by importance: Sites(25%), Lists(25%), ContentTypes(15%), SharingLinks(10%), SiteAdmins(15%), HubSites(10%)
+ */
+function calculateMigrationReadiness(
+  sitesCount: number,
+  listsCount: number,
+  contentTypesCount: number,
+  sharingLinksCount: number,
+  siteAdminsCount: number,
+  hubSitesCount: number
+): number {
+  const weights = {
+    sites: 25,
+    lists: 25,
+    contentTypes: 15,
+    sharingLinks: 10,
+    siteAdmins: 15,
+    hubSites: 10,  // Hub sites may legitimately be 0 if none configured
+  };
+
+  let totalWeight = 0;
+  let achievedWeight = 0;
+
+  // Sites - critical
+  totalWeight += weights.sites;
+  if (sitesCount > 0) achievedWeight += weights.sites;
+
+  // Lists - critical
+  totalWeight += weights.lists;
+  if (listsCount > 0) achievedWeight += weights.lists;
+
+  // Content Types - important for migration
+  totalWeight += weights.contentTypes;
+  if (contentTypesCount > 0) achievedWeight += weights.contentTypes;
+
+  // Sharing Links - helpful for security review
+  totalWeight += weights.sharingLinks;
+  // Sharing links might be 0 if no external sharing, still count partial
+  achievedWeight += weights.sharingLinks; // Always count - absence is also information
+
+  // Site Admins - important for migration coordination
+  totalWeight += weights.siteAdmins;
+  if (siteAdminsCount > 0) achievedWeight += weights.siteAdmins;
+
+  // Hub Sites - may be 0 if not configured
+  totalWeight += weights.hubSites;
+  achievedWeight += weights.hubSites; // Always count - absence is also information
+
+  return Math.round((achievedWeight / totalWeight) * 100);
+}
 
 /**
  * Format bytes utility

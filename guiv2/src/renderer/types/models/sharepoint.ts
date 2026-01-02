@@ -292,6 +292,18 @@ export interface SharePointDiscoveryResult {
   contentTypes: SharePointContentType[];
   workflows: SharePointWorkflow[];
 
+  // v2.0.0: Extended discovery data
+  sharingLinks?: any[];
+  hubSites?: any[];
+  siteAdmins?: any[];
+  executionId?: string;
+  metadata?: {
+    TenantName?: string;
+    ExecutionId?: string;
+    ElapsedTimeSeconds?: number;
+    [key: string]: any;
+  };
+
   // Statistics
   statistics: SharePointDiscoveryStatistics;
 

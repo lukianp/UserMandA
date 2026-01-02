@@ -256,8 +256,12 @@ $script:AppConfig = @{
         
         # SharePoint and Teams
         "Sites.Read.All" = "Read SharePoint sites and content"
+        "Sites.ReadWrite.All" = "Read and write SharePoint sites and content"
         "Sites.FullControl.All" = "Full control of SharePoint sites (for migration scenarios)"
+        "Sites.Manage.All" = "Manage SharePoint sites (permissions, sharing settings)"
         "Files.Read.All" = "Read all files across the organization"
+        "SharePointTenantSettings.Read.All" = "Read SharePoint tenant settings (hub sites, sharing policies)"
+        "SharePointTenantSettings.ReadWrite.All" = "Read and write SharePoint tenant settings"
         "Team.ReadBasic.All" = "Read basic team information"
         "TeamMember.Read.All" = "Read team members and ownership"
         "TeamSettings.Read.All" = "Read team settings and configuration"

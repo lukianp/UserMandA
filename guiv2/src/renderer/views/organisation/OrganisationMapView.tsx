@@ -21,8 +21,11 @@ import { Network, RefreshCw, Download, Home, Filter, Search, ChevronRight, X } f
 
 // Default filter state with all types and statuses selected
 const ALL_ENTITY_TYPES: EntityType[] = [
+  'company', 'l3-organization', 'line-of-business', 'business-unit-location',
   'datacenter', 'it-component', 'application', 'platform',
-  'provider-interface', 'consumer-interface', 'business-capability', 'company'
+  'provider-interface', 'consumer-interface', 'business-capability',
+  'user', 'group', 'mailbox', 'license',
+  'subscription', 'resource-group'
 ];
 
 const ALL_STATUSES: EntityStatus[] = [

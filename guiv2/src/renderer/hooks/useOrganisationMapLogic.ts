@@ -30,6 +30,15 @@ import {
 } from '../types/models/organisation';
 import { useProfileStore } from '../store/useProfileStore';
 
+// Import linker modules for rule-based relationship generation
+import { run as runTenantLinker } from '../views/organisation/linkers/linkTenant';
+import { run as runIdentityLinker } from '../views/organisation/linkers/linkIdentity';
+import { run as runLicensingLinker } from '../views/organisation/linkers/linkLicensing';
+import { run as runAzureInfraLinker } from '../views/organisation/linkers/linkAzureInfra';
+import { run as runAppsLinker } from '../views/organisation/linkers/linkApps';
+import { run as runDependenciesLinker } from '../views/organisation/linkers/linkDependencies';
+import { run as runSecurityLinker } from '../views/organisation/linkers/linkSecurity';
+
 // Performance constants - CRITICAL for handling large datasets
 const BATCH_SIZE = 100; // Process nodes in batches to avoid blocking
 const MAX_LINKS_PER_NODE = 20; // Limit links per node to prevent performance issues
@@ -872,15 +881,15 @@ const typeMapping: Record<string, {
     category: 'Directory Role'
   },
   'azurediscovery_serviceprincipals': {
-    type: 'application',
+    type: 'it-component',
     getName: (r) => r.DisplayName || r.AppId || r.Name,
-    priority: 2,
+    priority: 3,
     category: 'Service Principal'
   },
   'entraidserviceprincipals': {
-    type: 'application',
+    type: 'it-component',
     getName: (r) => r.DisplayName || r.AppId || r.Name,
-    priority: 2,
+    priority: 3,
     category: 'Service Principal'
   },
 
@@ -1057,6 +1066,57 @@ const typeMapping: Record<string, {
     category: 'Directory Role'
   },
 
+  // ===== ORGANIZATION HIERARCHY LAYER (Priority 1.5 - Between Tenant and Apps) =====
+  // Organizational structure entities - can be inferred from user Department/Location fields
+  'organization': {
+    type: 'l3-organization',
+    getName: (r) => r.Name || r.OrganizationName || r.TenantOrg,
+    priority: 1,
+    category: 'Organization'
+  },
+  'l3organization': {
+    type: 'l3-organization',
+    getName: (r) => r.Name || r.OrganizationName || r.DisplayName,
+    priority: 1,
+    category: 'Organization'
+  },
+  'businessunit': {
+    type: 'line-of-business',
+    getName: (r) => r.Name || r.BusinessUnit || r.Division || r.Department,
+    priority: 1,
+    category: 'Line of Business'
+  },
+  'lineofbusiness': {
+    type: 'line-of-business',
+    getName: (r) => r.Name || r.LOB || r.BusinessLine || r.Division,
+    priority: 1,
+    category: 'Line of Business'
+  },
+  'division': {
+    type: 'line-of-business',
+    getName: (r) => r.Name || r.Division || r.DivisionName,
+    priority: 1,
+    category: 'Line of Business'
+  },
+  'location': {
+    type: 'business-unit-location',
+    getName: (r) => r.Name || r.Location || r.Office || r.City,
+    priority: 1,
+    category: 'Business Location'
+  },
+  'office': {
+    type: 'business-unit-location',
+    getName: (r) => r.Name || r.OfficeLocation || r.Office || r.City,
+    priority: 1,
+    category: 'Business Location'
+  },
+  'site': {
+    type: 'business-unit-location',
+    getName: (r) => r.Name || r.SiteName || r.Location || r.City,
+    priority: 1,
+    category: 'Business Location'
+  },
+
   // ===== BUSINESS CAPABILITY LAYER (Priority 4 - Rightmost) =====
   // These are inferred from other data - departments, capabilities
   'department': {
@@ -1070,6 +1130,125 @@ const typeMapping: Record<string, {
     getName: (r) => r.Name || r.CapabilityName,
     priority: 4,
     category: 'Business Capability'
+  },
+
+  // ===== INTERFACE LAYER (Priority 2.5 - API/Integration Points) =====
+  // Provider Interfaces - Services/APIs that PROVIDE functionality to consumers
+  'apiendpoints': {
+    type: 'provider-interface',
+    getName: (r) => r.Name || r.EndpointName || r.Path || r.Url,
+    priority: 2,
+    category: 'API Endpoint'
+  },
+  'webhooks': {
+    type: 'provider-interface',
+    getName: (r) => r.Name || r.WebhookName || r.Url || r.TargetUrl,
+    priority: 2,
+    category: 'Webhook'
+  },
+  'graphapipermissions': {
+    type: 'provider-interface',
+    getName: (r) => r.PermissionName || r.Scope || r.Name,
+    priority: 2,
+    category: 'Graph API Permission'
+  },
+  'oauth2permissions': {
+    type: 'provider-interface',
+    getName: (r) => r.Value || r.DisplayName || r.Name || r.Scope,
+    priority: 2,
+    category: 'OAuth2 Permission'
+  },
+  'azurediscovery_apppermissions': {
+    type: 'provider-interface',
+    getName: (r) => r.ResourceDisplayName || r.PermissionName || r.Name,
+    priority: 2,
+    category: 'App Permission'
+  },
+  'entraidapppermissions': {
+    type: 'provider-interface',
+    getName: (r) => r.ResourceDisplayName || r.PermissionName || r.Scope,
+    priority: 2,
+    category: 'EntraID App Permission'
+  },
+  'logicappconnectors': {
+    type: 'provider-interface',
+    getName: (r) => r.Name || r.ConnectorName || r.DisplayName,
+    priority: 2,
+    category: 'Logic App Connector'
+  },
+  'powerautomateconnectors': {
+    type: 'provider-interface',
+    getName: (r) => r.Name || r.ConnectorName || r.DisplayName,
+    priority: 2,
+    category: 'Power Automate Connector'
+  },
+  'azurefunctionbindings': {
+    type: 'provider-interface',
+    getName: (r) => r.Name || r.BindingName || r.Type,
+    priority: 2,
+    category: 'Azure Function Binding'
+  },
+  'servicebusqueues': {
+    type: 'provider-interface',
+    getName: (r) => r.Name || r.QueueName,
+    priority: 2,
+    category: 'Service Bus Queue'
+  },
+  'servicebustopics': {
+    type: 'provider-interface',
+    getName: (r) => r.Name || r.TopicName,
+    priority: 2,
+    category: 'Service Bus Topic'
+  },
+  'eventhubs': {
+    type: 'provider-interface',
+    getName: (r) => r.Name || r.EventHubName,
+    priority: 2,
+    category: 'Event Hub'
+  },
+
+  // Consumer Interfaces - Services/Apps that CONSUME from providers
+  'apiconsumers': {
+    type: 'consumer-interface',
+    getName: (r) => r.Name || r.ConsumerName || r.ClientName || r.AppName,
+    priority: 2,
+    category: 'API Consumer'
+  },
+  'oauthclients': {
+    type: 'consumer-interface',
+    getName: (r) => r.ClientId || r.Name || r.AppDisplayName,
+    priority: 2,
+    category: 'OAuth Client'
+  },
+  'integrations': {
+    type: 'consumer-interface',
+    getName: (r) => r.Name || r.IntegrationName || r.SourceApp,
+    priority: 2,
+    category: 'Integration'
+  },
+  'dataflows': {
+    type: 'consumer-interface',
+    getName: (r) => r.Name || r.DataflowName || r.DisplayName,
+    priority: 2,
+    category: 'Dataflow'
+  },
+  'powerbiconnections': {
+    type: 'consumer-interface',
+    getName: (r) => r.Name || r.ConnectionName || r.DatasourceName,
+    priority: 2,
+    category: 'Power BI Connection'
+  },
+  'synapsepipelines': {
+    type: 'consumer-interface',
+    getName: (r) => r.Name || r.PipelineName,
+    priority: 2,
+    category: 'Synapse Pipeline'
+  },
+  'datafactorypipelines': {
+    type: 'consumer-interface',
+    getName: (r) => r.Name || r.PipelineName,
+    priority: 2,
+    category: 'Data Factory Pipeline'
   }
 };
 
@@ -1292,8 +1471,44 @@ export const useOrganisationMapLogic = (): UseOrganisationMapLogicReturn => {
         byAppId: indices.byAppId.size
       });
 
+      // Infer organizational structure from user data (departments, offices, cities)
+      // This creates line-of-business and business-unit-location nodes
+      const { inferredNodes, inferredLinks } = inferOrganizationalStructure(
+        mergedData.nodes,
+        indices,
+        selectedSourceProfile?.companyName
+          ? `company_${selectedSourceProfile.companyName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+          : undefined
+      );
+
+      // Add inferred nodes to the data and update indices
+      if (inferredNodes.length > 0) {
+        mergedData.nodes.push(...inferredNodes);
+        // Update indices with new nodes
+        for (const node of inferredNodes) {
+          indices.byId.set(node.id, node);
+          const nameLower = node.name.toLowerCase();
+          if (!indices.byName.has(nameLower)) {
+            indices.byName.set(nameLower, []);
+          }
+          indices.byName.get(nameLower)!.push(node);
+          if (!indices.byType.has(node.type)) {
+            indices.byType.set(node.type, []);
+          }
+          indices.byType.get(node.type)!.push(node);
+        }
+        console.log('[useOrganisationMapLogic] Added inferred org nodes to data:', {
+          newNodes: inferredNodes.length,
+          newLinks: inferredLinks.length,
+          totalNodes: mergedData.nodes.length
+        });
+      }
+
       // Generate cross-file relationships using optimized indices
       const crossFileLinks = generateCrossFileLinksOptimized(mergedData.nodes, nodesBySource, indices);
+
+      // Add inferred org links to cross-file links
+      crossFileLinks.push(...inferredLinks);
 
       // Create Company node from profile as the root entity
       // First, check for existing tenant/platform nodes with the same name and promote them
@@ -1940,6 +2155,325 @@ function generateLinksForFile(
 }
 
 /**
+ * Infer organizational structure from user data
+ * Extracts unique departments, offices, and locations from user records
+ * and creates l3-organization, line-of-business, and business-unit-location nodes
+ */
+function inferOrganizationalStructure(
+  nodes: SankeyNode[],
+  indices: NodeIndices,
+  companyId?: string
+): { inferredNodes: SankeyNode[], inferredLinks: SankeyLink[] } {
+  const inferredNodes: SankeyNode[] = [];
+  const inferredLinks: SankeyLink[] = [];
+  const users = indices.byType.get('user') || [];
+
+  if (users.length === 0) {
+    console.log('[inferOrgStructure] No users found, skipping org structure inference');
+    return { inferredNodes, inferredLinks };
+  }
+
+  // Extract unique organizational values from user records
+  const departments = new Map<string, { count: number; users: string[] }>();
+  const offices = new Map<string, { count: number; users: string[]; city?: string; country?: string }>();
+  const cities = new Map<string, { count: number; country?: string }>();
+
+  for (const user of users) {
+    const record = user.metadata.record;
+    const userId = user.id;
+
+    // Extract department (-> line-of-business)
+    const dept = record.Department?.trim();
+    if (dept && dept.length > 0 && dept.toLowerCase() !== 'unknown' && dept.toLowerCase() !== 'n/a') {
+      if (!departments.has(dept)) {
+        departments.set(dept, { count: 0, users: [] });
+      }
+      const deptData = departments.get(dept)!;
+      deptData.count++;
+      deptData.users.push(userId);
+    }
+
+    // Extract office location (-> business-unit-location)
+    const office = record.OfficeLocation?.trim() || record.Office?.trim();
+    if (office && office.length > 0 && office.toLowerCase() !== 'unknown' && office.toLowerCase() !== 'n/a') {
+      if (!offices.has(office)) {
+        offices.set(office, { count: 0, users: [], city: record.City, country: record.Country });
+      }
+      const officeData = offices.get(office)!;
+      officeData.count++;
+      officeData.users.push(userId);
+    }
+
+    // Extract city (-> business-unit-location if no office)
+    const city = record.City?.trim();
+    if (city && city.length > 0 && city.toLowerCase() !== 'unknown' && city.toLowerCase() !== 'n/a') {
+      if (!cities.has(city)) {
+        cities.set(city, { count: 0, country: record.Country });
+      }
+      cities.get(city)!.count++;
+    }
+  }
+
+  console.log('[inferOrgStructure] Extracted org data from users:', {
+    departments: departments.size,
+    offices: offices.size,
+    cities: cities.size,
+    totalUsers: users.length
+  });
+
+  // Create line-of-business nodes from departments
+  departments.forEach((data, deptName) => {
+    const nodeId = `lob-${deptName.toLowerCase().replace(/[^a-z0-9]/g, '_')}-inferred`;
+
+    // Check if node already exists
+    if (indices.byId.has(nodeId)) return;
+
+    const lobNode: SankeyNode = {
+      id: nodeId,
+      name: deptName,
+      type: 'line-of-business',
+      factSheet: {
+        baseInfo: {
+          name: deptName,
+          type: 'line-of-business',
+          description: `Department/Business Unit: ${deptName} (${data.count} users)`,
+          owner: 'Inferred from user data',
+          status: 'active',
+          tags: ['department', 'inferred', 'line-of-business']
+        },
+        relations: { incoming: [], outgoing: [] },
+        itComponents: [],
+        subscriptions: [],
+        comments: [],
+        todos: [],
+        resources: [],
+        metrics: [{
+          id: `metric-${nodeId}-users`,
+          name: 'User Count',
+          value: data.count,
+          unit: 'users',
+          category: 'headcount',
+          timestamp: new Date()
+        }],
+        surveys: [],
+        lastUpdate: new Date()
+      },
+      metadata: {
+        source: 'inferred-from-users',
+        sourceFile: 'user-department-analysis',
+        record: { department: deptName, userCount: data.count },
+        priority: 1,
+        category: 'Line of Business'
+      }
+    };
+    inferredNodes.push(lobNode);
+
+    // Link users to their department/LOB
+    for (const userId of data.users) {
+      inferredLinks.push({
+        source: userId,
+        target: nodeId,
+        value: 1,
+        type: 'realizes',
+        confidence: 85,
+        matchRule: 'HIGH',
+        evidence: [{
+          file: 'user-department-analysis',
+          fields: ['Department'],
+          sourceValue: userId,
+          targetValue: deptName
+        }]
+      });
+    }
+
+    // Link LOB to company if available
+    if (companyId) {
+      inferredLinks.push({
+        source: companyId,
+        target: nodeId,
+        value: 1,
+        type: 'ownership',
+        confidence: 90,
+        matchRule: 'HIGH',
+        evidence: [{
+          file: 'org-structure-inference',
+          fields: ['company', 'line-of-business'],
+          sourceValue: 'company',
+          targetValue: deptName
+        }]
+      });
+    }
+  });
+
+  // Create business-unit-location nodes from offices
+  offices.forEach((data, officeName) => {
+    const nodeId = `location-${officeName.toLowerCase().replace(/[^a-z0-9]/g, '_')}-inferred`;
+
+    // Check if node already exists
+    if (indices.byId.has(nodeId)) return;
+
+    const locationDesc = data.city && data.country
+      ? `Office: ${officeName} (${data.city}, ${data.country}) - ${data.count} users`
+      : `Office: ${officeName} - ${data.count} users`;
+
+    const locationNode: SankeyNode = {
+      id: nodeId,
+      name: officeName,
+      type: 'business-unit-location',
+      factSheet: {
+        baseInfo: {
+          name: officeName,
+          type: 'business-unit-location',
+          description: locationDesc,
+          owner: 'Inferred from user data',
+          status: 'active',
+          tags: ['office', 'location', 'inferred']
+        },
+        relations: { incoming: [], outgoing: [] },
+        itComponents: [],
+        subscriptions: [],
+        comments: [],
+        todos: [],
+        resources: [],
+        metrics: [{
+          id: `metric-${nodeId}-users`,
+          name: 'User Count',
+          value: data.count,
+          unit: 'users',
+          category: 'headcount',
+          timestamp: new Date()
+        }],
+        surveys: [],
+        lastUpdate: new Date()
+      },
+      metadata: {
+        source: 'inferred-from-users',
+        sourceFile: 'user-office-analysis',
+        record: { office: officeName, city: data.city, country: data.country, userCount: data.count },
+        priority: 1,
+        category: 'Business Location'
+      }
+    };
+    inferredNodes.push(locationNode);
+
+    // Link users to their office location
+    for (const userId of data.users) {
+      inferredLinks.push({
+        source: userId,
+        target: nodeId,
+        value: 1,
+        type: 'deployment',
+        confidence: 80,
+        matchRule: 'HIGH',
+        evidence: [{
+          file: 'user-office-analysis',
+          fields: ['OfficeLocation'],
+          sourceValue: userId,
+          targetValue: officeName
+        }]
+      });
+    }
+
+    // Link location to company if available
+    if (companyId) {
+      inferredLinks.push({
+        source: companyId,
+        target: nodeId,
+        value: 1,
+        type: 'ownership',
+        confidence: 90,
+        matchRule: 'HIGH',
+        evidence: [{
+          file: 'org-structure-inference',
+          fields: ['company', 'business-unit-location'],
+          sourceValue: 'company',
+          targetValue: officeName
+        }]
+      });
+    }
+  });
+
+  // Create additional location nodes from cities (if not already covered by offices)
+  cities.forEach((data, cityName) => {
+    // Skip if we already have an office in this city
+    const hasOfficeInCity = Array.from(offices.values()).some(o => o.city?.toLowerCase() === cityName.toLowerCase());
+    if (hasOfficeInCity) return;
+
+    const nodeId = `location-city-${cityName.toLowerCase().replace(/[^a-z0-9]/g, '_')}-inferred`;
+
+    // Check if node already exists
+    if (indices.byId.has(nodeId)) return;
+
+    const locationNode: SankeyNode = {
+      id: nodeId,
+      name: cityName,
+      type: 'business-unit-location',
+      factSheet: {
+        baseInfo: {
+          name: cityName,
+          type: 'business-unit-location',
+          description: data.country ? `City: ${cityName}, ${data.country}` : `City: ${cityName}`,
+          owner: 'Inferred from user data',
+          status: 'active',
+          tags: ['city', 'location', 'inferred']
+        },
+        relations: { incoming: [], outgoing: [] },
+        itComponents: [],
+        subscriptions: [],
+        comments: [],
+        todos: [],
+        resources: [],
+        metrics: [{
+          id: `metric-${nodeId}-users`,
+          name: 'User Count',
+          value: data.count,
+          unit: 'users',
+          category: 'headcount',
+          timestamp: new Date()
+        }],
+        surveys: [],
+        lastUpdate: new Date()
+      },
+      metadata: {
+        source: 'inferred-from-users',
+        sourceFile: 'user-city-analysis',
+        record: { city: cityName, country: data.country, userCount: data.count },
+        priority: 1,
+        category: 'Business Location'
+      }
+    };
+    inferredNodes.push(locationNode);
+
+    // Link location to company if available
+    if (companyId) {
+      inferredLinks.push({
+        source: companyId,
+        target: nodeId,
+        value: 1,
+        type: 'ownership',
+        confidence: 85,
+        matchRule: 'HIGH',
+        evidence: [{
+          file: 'org-structure-inference',
+          fields: ['company', 'business-unit-location'],
+          sourceValue: 'company',
+          targetValue: cityName
+        }]
+      });
+    }
+  });
+
+  console.log('[inferOrgStructure] Created inferred org nodes:', {
+    totalNodes: inferredNodes.length,
+    linesOfBusiness: inferredNodes.filter(n => n.type === 'line-of-business').length,
+    locations: inferredNodes.filter(n => n.type === 'business-unit-location').length,
+    links: inferredLinks.length
+  });
+
+  return { inferredNodes, inferredLinks };
+}
+
+/**
  * Generate cross-file relationships using optimized indices
  * Phase 8: Performance optimization with pre-computed indices
  */
@@ -2516,6 +3050,81 @@ function generateCrossFileLinksOptimized(
       }
     }
   }
+
+  // ========================================================================
+  // RULE-BASED LINKERS
+  // Call modular linkers for comprehensive relationship generation
+  // ========================================================================
+
+  // Build recordsByFileTypeKey for richer linker data access
+  // This provides raw CSV records grouped by file type, enabling linkers to
+  // access data that may not have been converted to nodes (e.g., permissions, assignments)
+  const recordsByFileTypeKey: Record<string, any[]> = {};
+  for (const [fileTypeKey, nodes] of Object.entries(nodesBySource)) {
+    recordsByFileTypeKey[fileTypeKey] = nodes
+      .map(n => n.metadata?.record)
+      .filter(Boolean);
+  }
+
+  const linkerContext = {
+    nodes: allNodes,
+    indices: {
+      byId: new Map(allNodes.map(n => [n.id, n])),
+      byName: indices.byName,
+      byType: indices.byType,
+      byUPN: indices.byUPN,
+      byAppId: indices.byAppId,
+      byObjectId: indices.byObjectId,
+      byMail: indices.byMail,
+      bySkuPartNumber: indices.bySkuPartNumber,
+      bySkuId: indices.bySkuId,
+      bySubscriptionId: indices.bySubscriptionId,
+      byResourceGroupName: indices.byResourceGroupName,
+      bySamAccountName: indices.bySamAccountName,
+    },
+    nodesBySource,
+    recordsByFileTypeKey
+  };
+
+  // Run each linker and merge results (avoiding duplicates)
+  const tenantLinks = runTenantLinker(linkerContext);
+  const identityLinks = runIdentityLinker(linkerContext);
+  const licensingLinks = runLicensingLinker(linkerContext);
+  const azureInfraLinks = runAzureInfraLinker(linkerContext);
+  const appsLinks = runAppsLinker(linkerContext);
+  const dependencyLinks = runDependenciesLinker(linkerContext);
+  const securityLinks = runSecurityLinker(linkerContext);
+
+  // Merge linker links (check for duplicates)
+  const allLinkerLinks = [
+    ...tenantLinks,
+    ...identityLinks,
+    ...licensingLinks,
+    ...azureInfraLinks,
+    ...appsLinks,
+    ...dependencyLinks,
+    ...securityLinks
+  ];
+  for (const link of allLinkerLinks) {
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    const key = `${sourceId}:${targetId}:${link.type}`;
+    if (!linkSet.has(key) && sourceId !== targetId) {
+      linkSet.add(key);
+      links.push(link);
+    }
+  }
+
+  console.log('[generateCrossFileLinksOptimized] Linker results:', {
+    tenantLinks: tenantLinks.length,
+    identityLinks: identityLinks.length,
+    licensingLinks: licensingLinks.length,
+    azureInfraLinks: azureInfraLinks.length,
+    appsLinks: appsLinks.length,
+    dependencyLinks: dependencyLinks.length,
+    securityLinks: securityLinks.length,
+    totalLinkerLinks: allLinkerLinks.length
+  });
 
   console.log('[generateCrossFileLinksOptimized] Generated links:', links.length, {
     applications: applications.length,

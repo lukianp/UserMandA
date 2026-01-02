@@ -5,9 +5,9 @@
 Import-Module (Join-Path $PSScriptRoot "..\Authentication\AuthenticationService.psm1") -Force
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Version: 2.0.0
 # Created: 2025-01-18
-# Last Modified: 2025-01-18
+# Last Modified: 2026-01-02
 
 <#
 .SYNOPSIS
@@ -473,6 +473,273 @@ function Invoke-SharePointDiscovery {
             Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalLists lists/libraries across $processedSites sites" -Context $Context
         }
 
+        # =====================================================================
+        # PHASE 2: MIGRATION-CRITICAL DATA DISCOVERY (v2.0.0)
+        # =====================================================================
+
+        # --- Discover Site Permissions ---
+        if ($includePermissions) {
+            Write-SharePointLog -Level "HEADER" -Message "=== PERMISSIONS DISCOVERY ===" -Context $Context
+            $totalPermissions = 0
+            $processedSitesForPerms = 0
+
+            foreach ($site in $sites) {
+                $processedSitesForPerms++
+
+                # Skip personal sites for performance
+                if ($site.IsPersonalSite) { continue }
+
+                try {
+                    Write-SharePointLog -Level "DEBUG" -Message "Getting permissions for site: $($site.DisplayName)" -Context $Context
+
+                    # Get site permissions via Graph API
+                    $permsUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/permissions"
+                    $permsResponse = Invoke-CustomGraphRequest -Uri $permsUri -Method GET -GraphContext $graphContext -ErrorAction SilentlyContinue
+
+                    if ($permsResponse -and $permsResponse.value) {
+                        foreach ($perm in $permsResponse.value) {
+                            $permObj = [PSCustomObject]@{
+                                SiteId = $site.SiteId
+                                SiteDisplayName = $site.DisplayName
+                                SiteWebUrl = $site.WebUrl
+                                PermissionId = $perm.id
+                                Roles = ($perm.roles -join ', ')
+                                GrantedToType = if ($perm.grantedToV2.user) { 'User' }
+                                               elseif ($perm.grantedToV2.group) { 'Group' }
+                                               elseif ($perm.grantedToV2.application) { 'Application' }
+                                               else { 'Unknown' }
+                                GrantedToId = if ($perm.grantedToV2.user) { $perm.grantedToV2.user.id }
+                                             elseif ($perm.grantedToV2.group) { $perm.grantedToV2.group.id }
+                                             elseif ($perm.grantedToV2.application) { $perm.grantedToV2.application.id }
+                                             else { $null }
+                                GrantedToDisplayName = if ($perm.grantedToV2.user) { $perm.grantedToV2.user.displayName }
+                                                      elseif ($perm.grantedToV2.group) { $perm.grantedToV2.group.displayName }
+                                                      elseif ($perm.grantedToV2.application) { $perm.grantedToV2.application.displayName }
+                                                      else { $null }
+                                GrantedToEmail = if ($perm.grantedToV2.user) { $perm.grantedToV2.user.email } else { $null }
+                                IsInherited = $perm.inheritedFrom -ne $null
+                                InheritedFrom = if ($perm.inheritedFrom) { $perm.inheritedFrom.id } else { $null }
+                                _DataType = 'SitePermission'
+                            }
+
+                            $totalPermissions++
+                            $null = $allDiscoveredData.Add($permObj)
+                        }
+                    }
+
+                    # Small delay to avoid throttling
+                    if ($processedSitesForPerms % 5 -eq 0) {
+                        Start-Sleep -Milliseconds 300
+                    }
+
+                } catch {
+                    Write-SharePointLog -Level "DEBUG" -Message "Could not get permissions for site $($site.DisplayName): $_" -Context $Context
+                }
+            }
+
+            Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalPermissions permission entries across $processedSitesForPerms sites" -Context $Context
+        }
+
+        # --- Discover External Sharing Links ---
+        Write-SharePointLog -Level "HEADER" -Message "=== EXTERNAL SHARING DISCOVERY ===" -Context $Context
+        $totalSharingLinks = 0
+        $sitesWithExternalSharing = 0
+
+        foreach ($site in $sites) {
+            # Skip personal sites
+            if ($site.IsPersonalSite) { continue }
+            if (-not $site.DriveId) { continue }
+
+            try {
+                # Get sharing links from the default document library
+                $sharingUri = "https://graph.microsoft.com/v1.0/drives/$($site.DriveId)/sharedWithMe"
+                $sharingResponse = Invoke-CustomGraphRequest -Uri $sharingUri -Method GET -GraphContext $graphContext -ErrorAction SilentlyContinue
+
+                # Also try to get sharing permissions on the root
+                $rootPermsUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/drive/root/permissions"
+                $rootPermsResponse = Invoke-CustomGraphRequest -Uri $rootPermsUri -Method GET -GraphContext $graphContext -ErrorAction SilentlyContinue
+
+                if ($rootPermsResponse -and $rootPermsResponse.value) {
+                    $hasExternal = $false
+                    foreach ($perm in $rootPermsResponse.value) {
+                        # Check for link-based sharing (anonymous or anyone links)
+                        if ($perm.link) {
+                            $linkObj = [PSCustomObject]@{
+                                SiteId = $site.SiteId
+                                SiteDisplayName = $site.DisplayName
+                                SiteWebUrl = $site.WebUrl
+                                PermissionId = $perm.id
+                                LinkType = $perm.link.type  # view, edit, embed
+                                LinkScope = $perm.link.scope  # anonymous, organization, users
+                                LinkWebUrl = $perm.link.webUrl
+                                ExpirationDateTime = $perm.expirationDateTime
+                                HasPassword = $perm.link.password -ne $null
+                                IsAnonymous = $perm.link.scope -eq 'anonymous'
+                                IsOrganization = $perm.link.scope -eq 'organization'
+                                CreatedDateTime = $perm.createdDateTime
+                                _DataType = 'SharingLink'
+                            }
+
+                            $totalSharingLinks++
+                            $null = $allDiscoveredData.Add($linkObj)
+
+                            if ($perm.link.scope -eq 'anonymous') {
+                                $hasExternal = $true
+                            }
+                        }
+
+                        # Check for external user access
+                        if ($perm.grantedToV2 -and $perm.grantedToV2.user -and
+                            $perm.grantedToV2.user.email -and
+                            $perm.grantedToV2.user.email -notlike "*@$tenantName*") {
+                            $hasExternal = $true
+                        }
+                    }
+
+                    if ($hasExternal) {
+                        $sitesWithExternalSharing++
+                    }
+                }
+
+            } catch {
+                Write-SharePointLog -Level "DEBUG" -Message "Could not get sharing info for site $($site.DisplayName): $_" -Context $Context
+            }
+        }
+
+        Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalSharingLinks sharing links, $sitesWithExternalSharing sites with external sharing" -Context $Context
+
+        # --- Discover Content Types ---
+        Write-SharePointLog -Level "HEADER" -Message "=== CONTENT TYPES DISCOVERY ===" -Context $Context
+        $totalContentTypes = 0
+        $customContentTypes = 0
+
+        foreach ($site in $sites) {
+            # Skip personal sites
+            if ($site.IsPersonalSite) { continue }
+
+            try {
+                Write-SharePointLog -Level "DEBUG" -Message "Getting content types for site: $($site.DisplayName)" -Context $Context
+
+                $ctUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/contentTypes"
+                $ctResponse = Invoke-CustomGraphRequest -Uri $ctUri -Method GET -GraphContext $graphContext -ErrorAction SilentlyContinue
+
+                if ($ctResponse -and $ctResponse.value) {
+                    foreach ($ct in $ctResponse.value) {
+                        # Check if it's a custom content type (not built-in)
+                        $isCustom = -not ($ct.isBuiltIn -eq $true)
+
+                        $ctObj = [PSCustomObject]@{
+                            SiteId = $site.SiteId
+                            SiteDisplayName = $site.DisplayName
+                            SiteWebUrl = $site.WebUrl
+                            ContentTypeId = $ct.id
+                            Name = $ct.name
+                            Description = $ct.description
+                            Group = $ct.group
+                            IsBuiltIn = $ct.isBuiltIn
+                            IsCustom = $isCustom
+                            Hidden = $ct.hidden
+                            ReadOnly = $ct.readOnly
+                            Sealed = $ct.sealed
+                            ParentId = if ($ct.parentId) { $ct.parentId } else { $null }
+                            _DataType = 'ContentType'
+                        }
+
+                        $totalContentTypes++
+                        if ($isCustom) { $customContentTypes++ }
+                        $null = $allDiscoveredData.Add($ctObj)
+                    }
+                }
+
+            } catch {
+                Write-SharePointLog -Level "DEBUG" -Message "Could not get content types for site $($site.DisplayName): $_" -Context $Context
+            }
+        }
+
+        Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalContentTypes content types ($customContentTypes custom)" -Context $Context
+
+        # --- Discover Hub Sites ---
+        if ($includeHubSites) {
+            Write-SharePointLog -Level "HEADER" -Message "=== HUB SITES DISCOVERY ===" -Context $Context
+            $hubSiteCount = 0
+
+            try {
+                # Get hub sites - requires SharePoint Admin access
+                # Using the sites search with hub filter
+                $hubUri = "https://graph.microsoft.com/v1.0/sites?`$filter=isHubSite eq true&`$top=100"
+                $hubResponse = Invoke-CustomGraphRequest -Uri $hubUri -Method GET -GraphContext $graphContext -ErrorAction SilentlyContinue
+
+                if ($hubResponse -and $hubResponse.value) {
+                    foreach ($hub in $hubResponse.value) {
+                        $hubObj = [PSCustomObject]@{
+                            SiteId = $hub.id
+                            DisplayName = $hub.displayName
+                            WebUrl = $hub.webUrl
+                            Description = $hub.description
+                            IsHubSite = $true
+                            HubSiteId = $hub.id  # Hub sites are their own hub
+                            CreatedDateTime = $hub.createdDateTime
+                            _DataType = 'HubSite'
+                        }
+
+                        $hubSiteCount++
+                        $null = $allDiscoveredData.Add($hubObj)
+                    }
+                }
+
+                Write-SharePointLog -Level "SUCCESS" -Message "Discovered $hubSiteCount hub sites" -Context $Context
+
+            } catch {
+                Write-SharePointLog -Level "DEBUG" -Message "Hub sites discovery not available: $_" -Context $Context
+            }
+        }
+
+        # --- Discover Site Collection Admins ---
+        if ($includeSiteCollectionAdmins) {
+            Write-SharePointLog -Level "HEADER" -Message "=== SITE ADMINS DISCOVERY ===" -Context $Context
+            $totalAdmins = 0
+
+            foreach ($site in $sites) {
+                # Skip personal sites
+                if ($site.IsPersonalSite) { continue }
+
+                try {
+                    # Get site owners (closest to site collection admins via Graph)
+                    $ownersUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/permissions?`$filter=roles/any(r:r eq 'owner')"
+                    $ownersResponse = Invoke-CustomGraphRequest -Uri $ownersUri -Method GET -GraphContext $graphContext -ErrorAction SilentlyContinue
+
+                    if ($ownersResponse -and $ownersResponse.value) {
+                        foreach ($owner in $ownersResponse.value) {
+                            $adminObj = [PSCustomObject]@{
+                                SiteId = $site.SiteId
+                                SiteDisplayName = $site.DisplayName
+                                SiteWebUrl = $site.WebUrl
+                                AdminType = 'SiteOwner'
+                                UserId = if ($owner.grantedToV2.user) { $owner.grantedToV2.user.id } else { $null }
+                                DisplayName = if ($owner.grantedToV2.user) { $owner.grantedToV2.user.displayName }
+                                             elseif ($owner.grantedToV2.group) { $owner.grantedToV2.group.displayName }
+                                             else { 'Unknown' }
+                                Email = if ($owner.grantedToV2.user) { $owner.grantedToV2.user.email } else { $null }
+                                PrincipalType = if ($owner.grantedToV2.user) { 'User' }
+                                               elseif ($owner.grantedToV2.group) { 'Group' }
+                                               else { 'Unknown' }
+                                Roles = ($owner.roles -join ', ')
+                                _DataType = 'SiteAdmin'
+                            }
+
+                            $totalAdmins++
+                            $null = $allDiscoveredData.Add($adminObj)
+                        }
+                    }
+
+                } catch {
+                    Write-SharePointLog -Level "DEBUG" -Message "Could not get admins for site $($site.DisplayName): $_" -Context $Context
+                }
+            }
+
+            Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalAdmins site administrators/owners" -Context $Context
+        }
+
         # 7. PREPARE DATA GROUPS FOR ORCHESTRATOR & EXPORT
         if ($allDiscoveredData.Count -gt 0) {
             Write-SharePointLog -Level "INFO" -Message "Preparing $($allDiscoveredData.Count) records for export..." -Context $Context
@@ -492,6 +759,8 @@ function Invoke-SharePointDiscovery {
                     'Site' { 'SharePointSites' }
                     'List' { 'SharePointLists' }
                     'SitePermission' { 'SharePointSitePermissions' }
+                    'SharingLink' { 'SharePointSharingLinks' }
+                    'ContentType' { 'SharePointContentTypes' }
                     'HubSite' { 'SharePointHubSites' }
                     'SiteAdmin' { 'SharePointSiteAdmins' }
                     default { "SharePoint_$dataType" }
@@ -521,10 +790,17 @@ function Invoke-SharePointDiscovery {
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
         $result.Metadata["SiteCount"] = $sites.Count
         $result.Metadata["ListCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'List' }).Count
+        $result.Metadata["PermissionCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'SitePermission' }).Count
+        $result.Metadata["SharingLinkCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'SharingLink' }).Count
+        $result.Metadata["ContentTypeCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'ContentType' }).Count
+        $result.Metadata["CustomContentTypeCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'ContentType' -and $_.IsCustom -eq $true }).Count
+        $result.Metadata["HubSiteCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'HubSite' }).Count
+        $result.Metadata["SiteAdminCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'SiteAdmin' }).Count
         $result.Metadata["TenantName"] = $tenantName
         $result.Metadata["SessionId"] = $SessionId
         $result.Metadata["CredentialSource"] = $credentialSource
         $result.Metadata["AuthenticationMethod"] = "Direct Access Token (Microsoft Graph)"
+        $result.Metadata["ModuleVersion"] = "2.0.0"
 
         # Log authentication summary
         Write-SharePointLog -Level "HEADER" -Message "=== AUTHENTICATION SUMMARY ===" -Context $Context

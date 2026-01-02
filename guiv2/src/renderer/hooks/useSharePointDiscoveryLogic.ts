@@ -67,7 +67,7 @@ export function useSharePointDiscoveryLogic() {
   const [permissionFilter, setPermissionFilter] = useState<SharePointPermissionFilter>({});
 
   // UI state
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'sites' | 'lists' | 'permissions'>('overview');
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'sites' | 'lists' | 'permissions' | 'contentTypes' | 'sharingLinks' | 'siteAdmins' | 'hubSites'>('overview');
 
   // ============================================================================
   // Data Fetching
@@ -136,26 +136,38 @@ export function useSharePointDiscoveryLogic() {
         };
 
         // ✅ FIX: Transform grouped data structure to flat properties
+        // Discovery data is nested THREE levels deep:
+        // data.result → execution wrapper (success, data, duration, etc.)
+        // data.result.data → PowerShell result wrapper (Success, ModuleName, Data, etc.)
+        // data.result.data.Data → actual grouped resources array
         if (data.result) {
           const transformedResult = { ...data.result } as any;
 
           console.log('[SharePointDiscoveryHook] Starting transformation...');
+          console.log('[SharePointDiscoveryHook] data.result keys:', Object.keys(data.result));
 
-          // Check for both 'Data' (uppercase) and 'data' (lowercase)
-          const dataArray = transformedResult.Data || transformedResult.data;
+          // Navigate through the three-level nesting
+          const rawData = data.result as any;
+          const psResult = rawData.data || rawData;  // Level 2: PS result wrapper
+          const dataArray = psResult?.Data || psResult?.data;  // Level 3: Actual grouped data
 
-          console.log('[SharePointDiscoveryHook] transformedResult.Data exists?', !!transformedResult.Data);
-          console.log('[SharePointDiscoveryHook] transformedResult.data exists?', !!transformedResult.data);
+          console.log('[SharePointDiscoveryHook] rawData keys:', Object.keys(rawData));
+          console.log('[SharePointDiscoveryHook] psResult keys:', psResult ? Object.keys(psResult) : 'null');
           console.log('[SharePointDiscoveryHook] dataArray exists?', !!dataArray);
           console.log('[SharePointDiscoveryHook] dataArray isArray?', Array.isArray(dataArray));
+
+          // Initialize result arrays (v2.0.0 - enhanced with migration data)
+          transformedResult.sites = [];
+          transformedResult.lists = [];
+          transformedResult.permissions = [];
+          transformedResult.sharingLinks = [];
+          transformedResult.contentTypes = [];
+          transformedResult.hubSites = [];
+          transformedResult.siteAdmins = [];
 
           // Extract data from grouped structure
           if (dataArray && Array.isArray(dataArray)) {
             console.log('[SharePointDiscoveryHook] Transforming data array with', dataArray.length, 'groups');
-
-            transformedResult.sites = [];
-            transformedResult.lists = [];
-            transformedResult.permissions = [];
 
             dataArray.forEach((group: any, index: number) => {
               console.log(`[SharePointDiscoveryHook] Processing group ${index}:`, group.Name, 'with', group.Group?.length || 0, 'items');
@@ -169,20 +181,38 @@ export function useSharePointDiscoveryLogic() {
               } else if (group.Name === 'SharePointSitePermissions' && group.Group) {
                 transformedResult.permissions = group.Group;
                 console.log('[SharePointDiscoveryHook] Set permissions:', transformedResult.permissions.length);
+              } else if (group.Name === 'SharePointSharingLinks' && group.Group) {
+                transformedResult.sharingLinks = group.Group;
+                console.log('[SharePointDiscoveryHook] Set sharingLinks:', transformedResult.sharingLinks.length);
+              } else if (group.Name === 'SharePointContentTypes' && group.Group) {
+                transformedResult.contentTypes = group.Group;
+                console.log('[SharePointDiscoveryHook] Set contentTypes:', transformedResult.contentTypes.length);
+              } else if (group.Name === 'SharePointHubSites' && group.Group) {
+                transformedResult.hubSites = group.Group;
+                console.log('[SharePointDiscoveryHook] Set hubSites:', transformedResult.hubSites.length);
               } else if (group.Name === 'SharePointSiteAdmins' && group.Group) {
-                if (!transformedResult.permissions) transformedResult.permissions = [];
-                transformedResult.permissions.push(...group.Group);
-                console.log('[SharePointDiscoveryHook] Added admins to permissions:', transformedResult.permissions.length);
+                transformedResult.siteAdmins = group.Group;
+                console.log('[SharePointDiscoveryHook] Set siteAdmins:', transformedResult.siteAdmins.length);
               }
             });
+
+            // Copy metadata from psResult
+            if (psResult?.Metadata) {
+              transformedResult.metadata = psResult.Metadata;
+            }
 
             console.log('[SharePointDiscoveryHook] Transformed data:', {
               sites: transformedResult.sites?.length || 0,
               lists: transformedResult.lists?.length || 0,
               permissions: transformedResult.permissions?.length || 0,
+              sharingLinks: transformedResult.sharingLinks?.length || 0,
+              contentTypes: transformedResult.contentTypes?.length || 0,
+              hubSites: transformedResult.hubSites?.length || 0,
+              siteAdmins: transformedResult.siteAdmins?.length || 0,
             });
           } else {
-            console.warn('[SharePointDiscoveryHook] Data array not found or not an array, setting result as-is');
+            console.warn('[SharePointDiscoveryHook] Data array not found or not an array');
+            console.log('[SharePointDiscoveryHook] psResult structure:', psResult);
           }
 
           console.log('[SharePointDiscoveryHook] Setting result with sites:', transformedResult.sites?.length || 0);

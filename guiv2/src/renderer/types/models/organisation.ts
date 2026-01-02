@@ -27,7 +27,11 @@ export type EntityType =
   | 'license'
   // Azure hierarchy types (NEW)
   | 'subscription'
-  | 'resource-group';
+  | 'resource-group'
+  // Organization hierarchy types (NEW)
+  | 'l3-organization'
+  | 'line-of-business'
+  | 'business-unit-location';
 
 /**
  * Entity Status

@@ -17,8 +17,9 @@
 6. [Service Layer](#service-layer)
 7. [IPC Communication](#ipc-communication)
 8. [Module Structure](#module-structure)
-9. [Performance Architecture](#performance-architecture)
-10. [Security Architecture](#security-architecture)
+9. [Organisation Map](#organisation-map)
+10. [Performance Architecture](#performance-architecture)
+11. [Security Architecture](#security-architecture)
 
 ## Overview
 
@@ -487,6 +488,196 @@ graph LR
     PS --> CR
     PS --> LS
     FS --> LS
+```
+
+## Organisation Map
+
+The Organisation Map is a LeanIX-style enterprise architecture visualization that maps discovered data to interactive entity diagrams, enabling informed M&A decisions through visual relationship exploration.
+
+### Overview
+
+```mermaid
+graph TB
+    subgraph "Data Sources"
+        CSV[116+ CSV File Types]
+        PS[PowerShell Discovery]
+    end
+
+    subgraph "Processing Pipeline"
+        TM[Type Mapping Engine]
+        NI[Node Index Builder]
+        LM[Linker Modules]
+    end
+
+    subgraph "Visualization"
+        SK[Sankey Diagram]
+        TE[Tiered Explorer]
+        FS[Fact Sheet Modal]
+    end
+
+    CSV --> TM
+    PS --> CSV
+    TM --> NI
+    NI --> LM
+    LM --> SK
+    SK --> TE
+    TE --> FS
+```
+
+### Entity Type Taxonomy
+
+The system supports 16 entity types organized into layers:
+
+| Layer | Entity Types | Priority |
+|-------|-------------|----------|
+| **Infrastructure** | datacenter, it-component | 1 |
+| **Applications** | application | 2 |
+| **Identity** | user, mailbox | 2 |
+| **Platform** | platform, group, license, subscription, resource-group | 3 |
+| **Organization** | l3-organization, line-of-business, business-unit-location | 1.5 |
+| **Business** | business-capability | 4 |
+| **Interfaces** | provider-interface, consumer-interface | 2.5 |
+
+### Relation Types
+
+```mermaid
+graph LR
+    subgraph "Ownership Relations"
+        O1[Company → Platform]
+        O2[Platform → Application]
+        O3[Subscription → Resource Group]
+    end
+
+    subgraph "Identity Relations"
+        I1[User → Mailbox: has-mailbox]
+        I2[User → Group: member-of]
+        I3[User → License: assigned]
+        I4[Manager → Report: manages]
+    end
+
+    subgraph "Dependency Relations"
+        D1[App → Database: provides]
+        D2[App → App: dependency]
+        D3[Resource → RG: scoped-to]
+    end
+```
+
+### Linker Architecture
+
+Seven specialized linker modules generate cross-file relationships with confidence scoring:
+
+| Linker | Purpose | Key Relations |
+|--------|---------|---------------|
+| **linkTenant** | Tenant/subscription hierarchy | ownership, scoped-to |
+| **linkIdentity** | User/group/mailbox relations | has-mailbox, member-of, manages |
+| **linkLicensing** | License assignment matching | assigned |
+| **linkAzureInfra** | Azure resource hierarchy | ownership, scoped-to |
+| **linkApps** | Application dependencies | provides, consumes, dependency |
+| **linkDependencies** | Service/config dependencies | dependency |
+| **linkSecurity** | Security policy relations | ownership |
+
+### Confidence Scoring
+
+Each relationship includes confidence metadata:
+
+```typescript
+interface SankeyLink {
+  source: string;
+  target: string;
+  value: number;
+  type: RelationType;
+  confidence: number;      // 0-100 score
+  matchRule: MatchRule;    // EXACT | HIGH | MEDIUM | LOW
+  evidence: LinkEvidence[]; // Source files and fields
+}
+```
+
+| Match Rule | Confidence | Criteria |
+|------------|------------|----------|
+| EXACT | 95-100 | UPN, ObjectId, or AppId match |
+| HIGH | 85-94 | Email or verified ID match |
+| MEDIUM | 70-84 | Name-based match |
+| LOW | 50-69 | Heuristic or inferred match |
+
+### Service Principal Classification
+
+To prevent "Applications" bucket inflation, service principals are classified by their actual function:
+
+```mermaid
+graph TD
+    SP[Service Principal]
+    SP --> Check{Has specific pattern?}
+    Check -->|First-party app| IT[IT Component]
+    Check -->|System app| PL[Platform]
+    Check -->|Internal tool| APP[Application]
+    Check -->|No pattern| SP_NODE[Service Principal Node]
+```
+
+**Classification patterns:**
+- Microsoft Graph, Azure AD, O365 → Platform
+- Backup, Monitoring, Security tools → IT Component
+- Custom line-of-business apps → Application
+- Unclassified → Service Principal (IT Component)
+
+### Performance Optimizations
+
+```mermaid
+graph LR
+    subgraph "Limits"
+        N[5,000 Node Limit]
+        L[10,000 Link Limit]
+    end
+
+    subgraph "Indices"
+        I1[byId: O(1)]
+        I2[byUPN: O(1)]
+        I3[byObjectId: O(1)]
+        I4[byMail: O(1)]
+        I5[byAppId: O(1)]
+        I6[bySkuId: O(1)]
+    end
+
+    subgraph "Caching"
+        C1[Node Cache by File]
+        C2[Index Pre-computation]
+        C3[Lazy Link Generation]
+    end
+```
+
+### UI Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| OrganisationMapView | `views/organisation/` | Main map view |
+| SankeyDiagram | `components/organisms/` | D3-based Sankey visualization |
+| TieredExplorer | `components/organisms/` | Relation bucket browser |
+| FactSheetModal | `components/organisms/` | 9-tab entity details (LeanIX style) |
+| OrganisationMapFilters | `components/organisms/` | Entity type and status filters |
+| DetailPanel | `components/organisms/` | Slide-out entity details |
+
+### File Structure
+
+```
+guiv2/src/renderer/
+├── hooks/
+│   └── useOrganisationMapLogic.ts    # Main logic hook (116+ type mappings)
+├── views/organisation/
+│   ├── OrganisationMapView.tsx       # Main view
+│   └── linkers/                       # 7 linker modules
+│       ├── linkTenant.ts
+│       ├── linkIdentity.ts
+│       ├── linkLicensing.ts
+│       ├── linkAzureInfra.ts
+│       ├── linkApps.ts
+│       ├── linkDependencies.ts
+│       └── linkSecurity.ts
+├── types/models/
+│   └── organisation.ts               # Type definitions
+└── components/organisms/
+    ├── SankeyDiagram.tsx
+    ├── TieredExplorer.tsx
+    ├── FactSheetModal.tsx
+    └── OrganisationMapFilters.tsx
 ```
 
 ## Performance Architecture

@@ -1,6 +1,8 @@
 # BuildViewsEnrich - Enhanced Discovery Analysis & View Builder
 
-Advanced discovery workflow that analyzes PowerShell modules, maximizes resilience, enhances data collection, builds rich views, and maps discovered data to organizational structure.
+Advanced discovery workflow that analyzes PowerShell modules, maximizes resilience, enhances data collection, **assesses migration readiness**, builds rich views, and maps discovered data to organizational structure.
+
+**Core Principle**: Discovery data feeds the **Migration Control Plane** - the system that plans, orchestrates, and executes tenant-to-tenant migrations. Every module must collect sufficient data for migration planning.
 
 ## Usage
 
@@ -148,15 +150,95 @@ Get-Content "C:\DiscoveryData\<profile>\Raw\<filename>.csv" -TotalCount 3
 - Are error rates acceptable?
 
 **Decision:**
-- ✅ **SUCCESS**: Proceed to Phase 3 (View Building)
+- ✅ **SUCCESS**: Proceed to Phase 2.5 (Migration Assessment)
 - ⚠️ **ISSUES FOUND**: Iterate - go back to Phase 1, fix issues, re-test
 - ❌ **WORSE**: Rollback module, discuss with user
 
 ---
 
+## Phase 2.5: Migration Readiness Assessment (CRITICAL CHECKPOINT)
+
+### 8. Evaluate Data Completeness for Migration
+
+**THE PRINCIPLE**: Discovery data powers not just dashboards, but the **Migration Control Plane** - the system that plans, orchestrates, and executes migrations between tenants/environments. Incomplete data = incomplete migration planning = migration failures.
+
+Before building views, evaluate whether the module collects sufficient data for its migration use case.
+
+**Ask the Migration Question:**
+> "Is this module collecting enough information tenant-wide to make an informed decision to prepare moving [SERVICE] from one Azure tenant to another?"
+
+**For each module type, assess against these migration requirements:**
+
+| Service | Critical Migration Data | Nice-to-Have |
+|---------|------------------------|--------------|
+| **SharePoint** | Sites, Lists, Permissions, Content Types, Site Admins, External Sharing, Hub Sites | Workflows, Custom Solutions, Retention Policies |
+| **Exchange** | Mailboxes, Distribution Lists, Mail Flow Rules, Connectors, DNS/MX/SPF/DKIM | Journal Rules, Retention Tags, eDiscovery Holds |
+| **EntraID** | Users, Groups, App Registrations, Service Principals, Conditional Access | PIM Roles, Access Reviews, Entitlement Management |
+| **Intune** | Device Configs, Compliance Policies, Apps, Autopilot Profiles | Scripts, Proactive Remediation, Feature Updates |
+| **Azure Resources** | Subscriptions, Resource Groups, VMs, Storage, Networks, Key Vaults | Policy Assignments, Blueprints, Cost Data |
+| **Teams** | Teams, Channels, Membership, Apps, Policies | Private Channels, Shared Channels, Call Queues |
+| **Power Platform** | Environments, Apps, Flows, Connectors, DLP Policies | Solutions, AI Models, Portals |
+
+### 9. Generate Migration Coverage Report
+
+**Calculate Migration Readiness Score:**
+```
+Migration Readiness = (Collected Data Points / Required Data Points) × 100%
+```
+
+**Report Format:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  MIGRATION READINESS ASSESSMENT             │
+│                     [Module Name] Discovery                 │
+├─────────────────────────────────────────────────────────────┤
+│ Migration Readiness Score: [XX]%                            │
+├─────────────────────────────────────────────────────────────┤
+│ ✅ COLLECTED (feeds migration control plane):               │
+│    • [Data Type 1] - [count] records                        │
+│    • [Data Type 2] - [count] records                        │
+│    • [Data Type 3] - [count] records                        │
+├─────────────────────────────────────────────────────────────┤
+│ ❌ NOT COLLECTED (migration gaps):                          │
+│    • [Missing Data 1] - Required for [reason]               │
+│    • [Missing Data 2] - Required for [reason]               │
+├─────────────────────────────────────────────────────────────┤
+│ ⚠️ PARTIALLY COLLECTED:                                     │
+│    • [Data Type] - has [X] but missing [Y]                  │
+├─────────────────────────────────────────────────────────────┤
+│ RECOMMENDATION:                                             │
+│ [Proceed / Enhance module first / Critical gaps to address] │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 10. Decision Gate - Enhance or Proceed
+
+**Present to user:**
+1. Migration Readiness Score
+2. What data IS being collected
+3. What data is MISSING for migration
+4. Recommendation (with reasoning)
+
+**User decides:**
+- ✅ **Score ≥ 70% + User Approves**: Proceed to Phase 3 (View Building)
+- ⚠️ **Score < 70% OR Critical Gaps**: Go back to Phase 1, enhance module with missing data
+- 🔄 **User Chooses to Proceed Anyway**: Document gaps and proceed (user accepts risk)
+
+**Why This Matters:**
+- Discovery data → Information → Decisions → Migration Plans → Execution
+- Missing data now = manual work later = migration delays/failures
+- The Migration Control Plane needs comprehensive data to:
+  - Generate accurate migration scope
+  - Identify dependencies and blockers
+  - Calculate effort/timeline estimates
+  - Execute automated migration tasks
+  - Validate post-migration state
+
+---
+
 ## Phase 3: Rich View Building
 
-### 8. Build Discovery Logic Hook
+### 11. Build Discovery Logic Hook
 Create `guiv2/src/renderer/hooks/use<ModuleName>DiscoveredLogic.ts`:
 
 **Structure:**
@@ -209,7 +291,7 @@ return { activeTab, setActiveTab, searchTerm, setSearchTerm, loading, error, sta
 - `guiv2/src/renderer/hooks/useEntraIDM365DiscoveredLogic.ts`
 - `guiv2/src/renderer/hooks/useEntraIDAppDiscoveredLogic.ts`
 
-### 9. Build/Update Discovered View
+### 12. Build/Update Discovered View
 Update `guiv2/src/renderer/views/discovered/<ModuleName>DiscoveredView.tsx`:
 
 **MANDATORY: Discovery Success % Card (FIRST card, prominent position):**
@@ -300,7 +382,7 @@ const DiscoverySuccessCard: React.FC<{percentage: number; received: number; tota
 - Export CSV button
 - VirtualizedDataGrid with all columns
 
-### 10. Update Discovery View Results
+### 13. Update Discovery View Results
 Update `guiv2/src/renderer/views/discovery/<ModuleName>DiscoveryView.tsx`:
 
 **Import logic hook:**
@@ -319,7 +401,7 @@ const { statistics, filteredData, activeTab, setActiveTab, ... } = use<ModuleNam
 - Show VirtualizedDataGrid for each tab
 - Auto-reload when discovery completes
 
-### 11. Deploy & Test Views
+### 14. Deploy & Test Views
 ```powershell
 # Stop Electron
 Get-Process -Name electron -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -352,7 +434,7 @@ npm start 2>&1 | Select-Object -First 50
 
 ## Phase 4: Organizational Mapping
 
-### 12. Analyze Data-to-Organization Relationships
+### 15. Analyze Data-to-Organization Relationships
 
 **Think about entity mapping:**
 
@@ -372,7 +454,7 @@ npm start 2>&1 | Select-Object -First 50
 - Dependency chains
 - Access patterns
 
-### 13. Design Data Mapping Strategy
+### 16. Design Data Mapping Strategy
 
 **CSV-to-Map Linking Approach:**
 
@@ -416,7 +498,7 @@ interface EntityMapping {
 }
 ```
 
-### 14. Implement Map Integration
+### 17. Implement Map Integration
 
 **Create mapping logic:**
 
@@ -456,7 +538,7 @@ export function useOrganizationMapping() {
 - Highlight relationships on map
 - Show data lineage (how discovered, when, confidence)
 
-### 15. Final User Feedback
+### 18. Final User Feedback
 
 **Ask user to review:**
 
@@ -500,6 +582,7 @@ export function useOrganizationMapping() {
 ✅ **Transparent**: Show diffs, explain changes, highlight improvements with specific examples
 ✅ **Quality-Focused**: Maximize resilience, data richness, UX - don't compromise on quality
 ✅ **TodoWrite**: Use TodoWrite tool to track progress through ALL phases
+✅ **Migration-Ready**: Every module must be assessed for migration readiness BEFORE building views - discovery data feeds the Migration Control Plane which plans, orchestrates, and executes tenant-to-tenant migrations
 
 ---
 
@@ -511,6 +594,10 @@ export function useOrganizationMapping() {
 4. **Build views only after successful discovery test** - ensure data is good before building UI
 5. **Map integration should be data-driven** - read from CSV files, don't hardcode
 6. **Use TodoWrite extensively** - this is a multi-phase workflow, track progress carefully
+7. **NEVER rely on robocopy alone for deployment** - robocopy compares timestamp/size and may skip modified files. Always:
+   - Use explicit `Copy-Item -Force` for specific files you edited
+   - Verify destination has changes: `Select-String -Path 'C:\enterprisediscovery\...\File.tsx' -Pattern 'NewComponent'`
+   - If no output, the file wasn't copied - force copy it again
 
 ---
 
@@ -526,14 +613,32 @@ export function useOrganizationMapping() {
 5. Agent implements enhancements, copies to deployment
 6. "Module enhanced and deployed. Please run: `Invoke-Discovery -ModuleName 'EntraIDApp' -ProfileName 'ljpops'`"
 7. User runs discovery, pastes console output
-8. Agent analyzes: "Excellent! 4 CSVs generated, 1,234 records, no errors. Proceeding to build views..."
-9. Agent builds logic hook, discovered view, discovery view
-10. Agent deploys and launches app
-11. "Please test the EntraIDApp discovered view and provide feedback"
-12. User: "Looks great!"
-13. Agent: "Now let's map this to your organization map... [analyzes mappings]"
-14. Agent implements map integration
-15. "Complete! EntraIDApp module is enhanced, views are rich, and data is mapped to org structure."
+8. Agent analyzes: "Excellent! 4 CSVs generated, 1,234 records, no errors."
+9. **[MIGRATION ASSESSMENT]** Agent evaluates: "Let me assess migration readiness..."
+   ```
+   ┌─────────────────────────────────────────────────────────────┐
+   │                  MIGRATION READINESS ASSESSMENT             │
+   │                     EntraIDApp Discovery                    │
+   ├─────────────────────────────────────────────────────────────┤
+   │ Migration Readiness Score: 75%                              │
+   ├─────────────────────────────────────────────────────────────┤
+   │ ✅ COLLECTED: App Registrations, Service Principals,        │
+   │    Secrets/Certificates, API Permissions, Owners            │
+   ├─────────────────────────────────────────────────────────────┤
+   │ ❌ NOT COLLECTED: Conditional Access targeting apps         │
+   ├─────────────────────────────────────────────────────────────┤
+   │ RECOMMENDATION: Proceed - score meets threshold             │
+   └─────────────────────────────────────────────────────────────┘
+   ```
+   "Migration readiness is 75%. Proceed to view building?"
+10. User: "Yes"
+11. Agent builds logic hook, discovered view, discovery view
+12. Agent deploys and launches app
+13. "Please test the EntraIDApp discovered view and provide feedback"
+14. User: "Looks great!"
+15. Agent: "Now let's map this to your organization map... [analyzes mappings]"
+16. Agent implements map integration
+17. "Complete! EntraIDApp module is enhanced, views are rich, and data is mapped to org structure."
 
 ---
 

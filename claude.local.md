@@ -32,6 +32,30 @@ With a **30s timeout**. Do NOT use `Start-Process` - it launches in background a
 - Always run full build (main + preload + renderer) after copying files
 - The status checking loops need to be fast - don't add delays
 
+### Robocopy vs Copy-Item for Deployment
+
+**CRITICAL**: `robocopy /MIR` compares files by timestamp and size. If a source file was modified but has the same size as destination, robocopy may NOT copy it.
+
+**Symptoms**: After robocopy and full rebuild, visual changes don't appear in the app.
+
+**Solution**: For updated source files, ALWAYS verify and use explicit `Copy-Item -Force`:
+
+```powershell
+# 1. Verify source has the changes
+Select-String -Path 'D:\Scripts\UserMandA\guiv2\...\MyFile.tsx' -Pattern 'MyNewComponent'
+
+# 2. Check if destination has the changes
+Select-String -Path 'C:\enterprisediscovery\guiv2\...\MyFile.tsx' -Pattern 'MyNewComponent'
+
+# 3. If destination is missing changes, force copy
+Copy-Item -Path 'D:\Scripts\UserMandA\guiv2\...\MyFile.tsx' -Destination 'C:\enterprisediscovery\guiv2\...\' -Force
+```
+
+**Best practice for deployment**:
+1. After editing files, use explicit `Copy-Item -Force` for the specific files you changed
+2. Robocopy is still useful for initial full sync, but don't rely on it for incremental updates
+3. Always verify deployment file has your changes before rebuilding
+
 ## Discovery Data Nesting Pattern
 
 **CRITICAL**: PowerShell discovery results are nested THREE levels deep:
