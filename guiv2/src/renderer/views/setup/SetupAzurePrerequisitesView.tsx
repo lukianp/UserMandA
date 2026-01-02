@@ -204,6 +204,28 @@ const POWERSHELL_MODULES: Omit<PowerShellModule, 'status' | 'installedVersion' |
     size: '~5 MB',
     icon: <Activity className="w-5 h-5" />,
   },
+  {
+    name: 'DnsServer',
+    displayName: 'RSAT: DNS Server Tools',
+    description: 'DNS Server PowerShell module for discovering zones, records, forwarders, and server settings (requires Windows RSAT)',
+    category: 'core',
+    version: '1.0.0',
+    required: false,
+    dependencies: [],
+    size: '~15 MB',
+    icon: <GitBranch className="w-5 h-5" />,
+  },
+  {
+    name: 'DhcpServer',
+    displayName: 'RSAT: DHCP Server Tools',
+    description: 'DHCP Server PowerShell module for discovering scopes, leases, reservations, options, and failover (requires Windows RSAT)',
+    category: 'core',
+    version: '1.0.0',
+    required: false,
+    dependencies: [],
+    size: '~10 MB',
+    icon: <Activity className="w-5 h-5" />,
+  },
 ];
 
 // ============================================================================
@@ -846,8 +868,29 @@ const SetupAzurePrerequisitesView: React.FC = () => {
 
     try {
       if (window.electronAPI?.executeScript) {
+        // Special handling for RSAT modules (Windows Capabilities, not PSGallery modules)
+        const isRSATModule = moduleName === 'DnsServer' || moduleName === 'DhcpServer';
+        const capabilityName = moduleName === 'DnsServer' ? 'Rsat.Dns.Tools~~~~0.0.1.0' : 'Rsat.DHCP.Tools~~~~0.0.1.0';
+
         const result = await window.electronAPI.executeScript({
-          script: `
+          script: isRSATModule ? `
+            try {
+              # Install RSAT via Windows Capability
+              $capability = Get-WindowsCapability -Online -Name '${capabilityName}' -ErrorAction SilentlyContinue
+              if ($capability -and $capability.State -ne 'Installed') {
+                Write-Host "Installing ${moduleName} via Windows Capability..."
+                Add-WindowsCapability -Online -Name '${capabilityName}' -ErrorAction Stop | Out-Null
+                Write-Host "${moduleName} installed successfully"
+              } elseif ($capability.State -eq 'Installed') {
+                Write-Host "${moduleName} already installed"
+              } else {
+                throw "Windows Capability ${capabilityName} not found. May require Windows 10 1809+ or Windows Server 2019+"
+              }
+              @{ Success = $true } | ConvertTo-Json
+            } catch {
+              @{ Success = $false; Error = $_.Exception.Message } | ConvertTo-Json
+            }
+          ` : `
             try {
               Install-Module -Name '${moduleName}' -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
               @{ Success = $true } | ConvertTo-Json

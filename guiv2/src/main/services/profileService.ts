@@ -16,16 +16,23 @@ export class ProfileService {
   private readonly dataRootPath: string;
 
   constructor() {
-    this.profilesPath = path.join(app.getPath('appData'), 'MandADiscoverySuite', 'profiles.json');
     // Use MANDA_DISCOVERY_PATH env var if set, otherwise default
     this.dataRootPath = process.env.MANDA_DISCOVERY_PATH ||
       (process.platform === 'win32' ? path.join('C:', 'DiscoveryData') : path.join(app.getPath('userData'), 'DiscoveryData'));
+
+    // Store profiles.json in the discovery data root (C:\DiscoveryData\profiles.json)
+    // All company-related data should reside in C:\DiscoveryData, not user-specific AppData
+    this.profilesPath = path.join(this.dataRootPath, 'profiles.json');
   }
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
+    // Ensure C:\DiscoveryData directory exists
     await fs.mkdir(path.dirname(this.profilesPath), { recursive: true });
+
+    // One-time migration: Move profiles.json from AppData to C:\DiscoveryData
+    await this.migrateProfilesFromAppData();
 
     const adapter = new JSONFile<ProfileDatabase>(this.profilesPath);
     this.db = new Low(adapter, { profiles: [], version: 1 });
@@ -41,6 +48,41 @@ export class ProfileService {
 
     this.isInitialized = true;
     this.registerIPCHandlers();
+  }
+
+  /**
+   * One-time migration: Move profiles.json from AppData to C:\DiscoveryData
+   * This ensures all company data resides in C:\DiscoveryData, not user-specific AppData
+   */
+  private async migrateProfilesFromAppData(): Promise<void> {
+    const oldProfilesPath = path.join(app.getPath('appData'), 'MandADiscoverySuite', 'profiles.json');
+    const newProfilesPath = this.profilesPath;
+
+    try {
+      // Check if old AppData profiles.json exists
+      const oldExists = await fs.access(oldProfilesPath).then(() => true).catch(() => false);
+      const newExists = await fs.access(newProfilesPath).then(() => true).catch(() => false);
+
+      if (oldExists && !newExists) {
+        console.log(`[ProfileService] Migrating profiles.json from AppData to C:\\DiscoveryData...`);
+
+        // Read old profiles
+        const oldData = await fs.readFile(oldProfilesPath, 'utf-8');
+
+        // Write to new location
+        await fs.writeFile(newProfilesPath, oldData, 'utf-8');
+
+        console.log(`[ProfileService] ✅ Migration complete: profiles.json now in ${newProfilesPath}`);
+        console.log(`[ProfileService] Old file at ${oldProfilesPath} can be safely deleted (kept for backup)`);
+      } else if (oldExists && newExists) {
+        console.log(`[ProfileService] Both old and new profiles.json exist - using ${newProfilesPath}`);
+      } else {
+        console.log(`[ProfileService] Using profiles.json at ${newProfilesPath}`);
+      }
+    } catch (error) {
+      console.error(`[ProfileService] Migration failed (non-fatal):`, error);
+      // Non-fatal - continue with normal initialization
+    }
   }
 
   private registerIPCHandlers(): void {

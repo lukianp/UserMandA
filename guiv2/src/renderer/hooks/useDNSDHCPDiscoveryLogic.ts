@@ -83,6 +83,14 @@ export const useDNSDHCPDiscoveryLogic = () => {
     error: null,
   });
 
+  // Standard PowerShell console logs
+  const [logs, setLogs] = useState<Array<{ level: string; message: string; timestamp: string }>>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+
+  const addLog = (level: string, message: string) => {
+    setLogs((prev) => [...prev, { level, message, timestamp: new Date().toISOString() }]);
+  };
+
   // Load previous results on mount
   useEffect(() => {
     console.log('[DNSDHCPDiscoveryHook] Loading previous results');
@@ -104,6 +112,8 @@ export const useDNSDHCPDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[DNSDHCPDiscoveryHook] Discovery output:', data.message);
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        addLog(logLevel, data.message);
         setState((prev) => ({
           ...prev,
           progress: {
@@ -117,19 +127,34 @@ export const useDNSDHCPDiscoveryLogic = () => {
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[DNSDHCPDiscoveryHook] Discovery completed:', data);
+        console.log('[DNSDHCPDiscoveryHook] data.result:', data.result);
+        console.log('[DNSDHCPDiscoveryHook] data.result.data:', data.result?.data);
+        console.log('[DNSDHCPDiscoveryHook] data.result.data.Data:', data.result?.data?.Data);
+
+        // Parse nested PowerShell result structure
+        // data.result.data.Data is an array where [0] is boolean, [1] is the actual data
+        const psResult = data.result?.data || {};
+        const psData = Array.isArray(psResult.Data) ? psResult.Data : [];
+        const actualData = psData.length > 1 ? psData[1] : null;
+
+        console.log('[DNSDHCPDiscoveryHook] Parsed actualData:', actualData);
+
+        // Count total items from the actual data object
+        const dnsServerCount = actualData && actualData._DataType === 'DNSServer' ? 1 : 0;
+        const totalItems = dnsServerCount;
 
         const discoveryResult = {
           id: `dnsdhcp-discovery-${Date.now()}`,
           name: 'DNS & DHCP Discovery',
           moduleName: 'DNSDHCPDiscovery',
           displayName: 'DNS & DHCP Discovery',
-          itemCount: data?.result?.totalItems || (data?.result?.totalDNSServers || 0) + (data?.result?.totalDHCPServers || 0),
+          itemCount: totalItems,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
           filePath: data?.result?.outputPath || '',
           success: true,
-          summary: `Discovered ${data?.result?.totalDNSServers || 0} DNS servers with ${data?.result?.totalZones || 0} zones and ${data?.result?.totalDHCPServers || 0} DHCP servers with ${data?.result?.totalScopes || 0} scopes`,
+          summary: `Discovered ${dnsServerCount} DNS server${dnsServerCount !== 1 ? 's' : ''}`,
           errorMessage: '',
           additionalData: data.result,
           createdAt: new Date().toISOString(),
@@ -148,6 +173,7 @@ export const useDNSDHCPDiscoveryLogic = () => {
         }));
 
         addResult(discoveryResult);
+        addLog('success', `DNS/DHCP discovery completed! Found ${discoveryResult.itemCount} items.`);
         console.log(`[DNSDHCPDiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} items.`);
       }
     });
@@ -155,6 +181,7 @@ export const useDNSDHCPDiscoveryLogic = () => {
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.error('[DNSDHCPDiscoveryHook] Discovery error:', data.error);
+        addLog('error', data.error || 'Discovery failed');
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
@@ -172,6 +199,7 @@ export const useDNSDHCPDiscoveryLogic = () => {
     const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.warn('[DNSDHCPDiscoveryHook] Discovery cancelled');
+        addLog('warning', 'Discovery was cancelled by user');
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
@@ -197,6 +225,7 @@ export const useDNSDHCPDiscoveryLogic = () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
       setState((prev) => ({ ...prev, error: errorMessage }));
+      addLog('error', errorMessage);
       console.error('[DNSDHCPDiscoveryHook]', errorMessage);
       return;
     }
@@ -204,6 +233,10 @@ export const useDNSDHCPDiscoveryLogic = () => {
     if (state.isDiscovering) return;
 
     const token = `dnsdhcp-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    setShowExecutionDialog(true);
+    setLogs([]);
+    addLog('info', 'Starting DNS & DHCP discovery...');
 
     setState((prev) => ({
       ...prev,
@@ -255,6 +288,7 @@ export const useDNSDHCPDiscoveryLogic = () => {
     } catch (error: any) {
       const errorMessage = error.message || 'Unknown error occurred during discovery';
       console.error('[DNSDHCPDiscoveryHook] Discovery failed:', errorMessage);
+      addLog('error', errorMessage);
       setState((prev) => ({
         ...prev,
         isDiscovering: false,
@@ -320,16 +354,24 @@ export const useDNSDHCPDiscoveryLogic = () => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
   return {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
     progress: state.progress,
     error: state.error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    clearLogs,
   };
 };
 

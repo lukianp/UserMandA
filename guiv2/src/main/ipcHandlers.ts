@@ -2933,11 +2933,30 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         }
       }
 
-      // Merge credentials into parameters (will be passed to PowerShell Configuration)
+      // Derive domain from domainController if domainName not explicitly set
+      // e.g., "dc.ljpops.com" -> "ljpops.com"
+      let derivedDomain = activeProfile.domainName;
+      if (!derivedDomain && activeProfile.domainController) {
+        const parts = activeProfile.domainController.split('.');
+        if (parts.length >= 2) {
+          // Remove the first part (dc) and join the rest
+          derivedDomain = parts.slice(1).join('.');
+        }
+      }
+
+      // Merge credentials and domain info into parameters (will be passed to PowerShell Configuration)
       const enhancedParameters = {
         ...parameters,
-        ...(domainCreds ? { domainCredentials: domainCreds } : {})
+        ...(domainCreds ? { domainCredentials: domainCreds } : {}),
+        ...(activeProfile.domainController ? { domainController: activeProfile.domainController } : {}),
+        ...(derivedDomain ? { domain: derivedDomain } : {})
       };
+
+      // Log domain configuration for AD-related modules
+      if (adRelatedModules.includes(moduleName)) {
+        console.log(`[IPC:discovery:execute] Domain controller: ${activeProfile.domainController || 'not configured'}`);
+        console.log(`[IPC:discovery:execute] Domain: ${derivedDomain || 'not configured'}`);
+      }
 
       // Execute discovery module with credentials from profile
       const result = await psService.executeDiscoveryModule(

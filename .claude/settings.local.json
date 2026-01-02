@@ -210,7 +210,10 @@
       "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\*OneDrive*.tsx 2>nul & dir /b D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\hooks\\\\*OneDrive*Discovered*.ts 2>nul\")",
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\OneDrive*.csv 2>nul\")",
       "Bash(cmd /c \"if exist D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\OneDriveDiscoveredView.tsx \\(echo File exists\\) else \\(echo File does NOT exist\\)\")",
-      "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\hooks\\\\useOneDriveDiscoveredLogic.ts 2>nul && echo Hook exists || echo Hook NOT found\")"
+      "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\hooks\\\\useOneDriveDiscoveredLogic.ts 2>nul && echo Hook exists || echo Hook NOT found\")",
+      "Bash(cmd /c \"robocopy D:\\\\Scripts\\\\UserMandA-1 C:\\\\enterprisediscovery /MIR /XD .git node_modules .webpack demo-build ceo-personal-os /XF *.log /NFL /NDL /NJH /NJS\")",
+      "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA-1\\\\Modules\\\\Discovery\\\\*.psm1\")",
+      "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\lukia\\\\AppData\\\\Roaming | findstr /i profile | findstr /i json\")"
     ],
     "deny": [],
     "ask": []

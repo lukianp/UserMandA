@@ -19,7 +19,6 @@ import { ColDef } from 'ag-grid-community';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
-import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const DNSDHCPDiscoveryView: React.FC = () => {
@@ -29,10 +28,14 @@ const DNSDHCPDiscoveryView: React.FC = () => {
     isDiscovering,
     progress,
     error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    clearLogs,
   } = useDNSDHCPDiscoveryLogic();
 
   const [configExpanded, setConfigExpanded] = useState(false);
@@ -175,14 +178,6 @@ const DNSDHCPDiscoveryView: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="dnsdhcp-discovery-view" data-testid="dnsdhcp-discovery-view">
-      {isDiscovering && (
-        <LoadingOverlay
-          progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
-          onCancel={cancelDiscovery || undefined}
-          message={progress?.message || 'Discovering DNS and DHCP infrastructure...'}
-        />
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
@@ -595,11 +590,15 @@ const DNSDHCPDiscoveryView: React.FC = () => {
 
       {/* PowerShell Execution Dialog */}
       <PowerShellExecutionDialog
-        isOpen={false}
-        onClose={() => {}}
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
         scriptName="DNS & DHCP Discovery"
         scriptDescription="Discovering DNS zones, records, DHCP scopes, and lease assignments"
-        logs={[]}
+        logs={logs.map(log => ({
+          timestamp: log.timestamp,
+          message: log.message,
+          level: log.level as 'info' | 'success' | 'warning' | 'error'
+        }))}
         isRunning={isDiscovering}
         isCancelling={false}
         progress={progress ? {
@@ -608,7 +607,7 @@ const DNSDHCPDiscoveryView: React.FC = () => {
         } : undefined}
         onStart={startDiscovery}
         onStop={cancelDiscovery}
-        onClear={() => {}}
+        onClear={clearLogs}
         showStartButton={false}
       />
     </div>
