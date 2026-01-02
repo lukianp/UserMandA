@@ -82,6 +82,12 @@ function Invoke-EntraIDAppDiscovery {
                         }) -join ';'
                     } else { $null }
                     RequiredResourceAccessCount = if ($app.requiredResourceAccess) { $app.requiredResourceAccess.Count } else { 0 }
+                    RequiredResourceAppIds = if ($app.requiredResourceAccess) {
+                        ($app.requiredResourceAccess | ForEach-Object { $_.resourceAppId }) -join ';'
+                    } else { $null }
+                    RequiredPermissionCount = if ($app.requiredResourceAccess) {
+                        ($app.requiredResourceAccess | ForEach-Object { $_.resourceAccess.Count } | Measure-Object -Sum).Sum
+                    } else { 0 }
                     AppRoleCount = if ($app.appRoles) { $app.appRoles.Count } else { 0 }
                     OAuth2PermissionScopeCount = if ($app.api -and $app.api.oauth2PermissionScopes) { $app.api.oauth2PermissionScopes.Count } else { 0 }
                     KeyCredentialCount = if ($app.keyCredentials) { $app.keyCredentials.Count } else { 0 }

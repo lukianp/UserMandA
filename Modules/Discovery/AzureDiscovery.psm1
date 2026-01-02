@@ -2,9 +2,10 @@
 #Requires -Version 5.1
 
 # Author: System Enhancement
-# Version: 2.0.0
+# Version: 2.1.0
 # Created: 2025-08-03
-# Last Modified: 2025-08-03
+# Last Modified: 2026-01-02
+# v2.1.0 - Added full group membership enumeration (GroupMembers data type) for migration planning
 
 <#
 .SYNOPSIS
@@ -880,7 +881,75 @@ function Invoke-AzureDiscovery {
             $Result.AddError("Failed to discover groups: $($_.Exception.Message)", $_.Exception, @{Section="Groups"})
         }
         #endregion
-        
+
+        #region Full Group Membership Enumeration - CRITICAL FOR MIGRATION
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Enumerating full group membership for migration planning..." -Level "INFO"
+
+        try {
+            $groupMemberCount = 0
+            $groupsProcessed = 0
+            $totalGroups = $groups.Count
+
+            foreach ($group in $groups) {
+                $groupsProcessed++
+                if ($groupsProcessed % 50 -eq 0) {
+                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Group membership progress: $groupsProcessed / $totalGroups groups processed" -Level "INFO"
+                }
+
+                # Determine group type for context
+                $groupType = 'SecurityGroup'
+                if ($group.groupTypes -contains 'Unified') { $groupType = 'Microsoft365Group' }
+                if ($group.mailEnabled -and -not $group.securityEnabled) { $groupType = 'DistributionList' }
+
+                # Skip dynamic groups - members are computed, not assigned
+                $isDynamic = ($null -ne $group.membershipRule)
+
+                try {
+                    # Enumerate ALL members with pagination (no $top limit)
+                    $membersUri = "https://graph.microsoft.com/beta/groups/$($group.id)/members?`$select=id,displayName,userPrincipalName,mail"
+
+                    do {
+                        $membersResponse = Invoke-MgGraphRequest -Uri $membersUri -Method GET
+
+                        foreach ($member in $membersResponse.value) {
+                            $memberType = $member.'@odata.type' -replace '#microsoft.graph.', ''
+
+                            $memberData = [PSCustomObject]@{
+                                ObjectType              = "GroupMember"
+                                GroupId                 = $group.id
+                                GroupDisplayName        = $group.displayName
+                                GroupMail               = $group.mail
+                                GroupType               = $groupType
+                                IsDynamicGroup          = $isDynamic
+                                MemberId                = $member.id
+                                MemberDisplayName       = $member.displayName
+                                MemberUPN               = $member.userPrincipalName
+                                MemberMail              = $member.mail
+                                MemberType              = $memberType
+                                _DataType               = 'GroupMembers'
+                                SessionId               = $SessionId
+                            }
+                            $null = $allDiscoveredData.Add($memberData)
+                            $groupMemberCount++
+                        }
+
+                        $membersUri = $membersResponse.'@odata.nextLink'
+                    } while ($membersUri)
+
+                } catch {
+                    # Log but don't fail - some groups may have permission restrictions
+                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Could not enumerate members for group '$($group.displayName)': $($_.Exception.Message)" -Level "DEBUG"
+                }
+            }
+
+            $Result.Metadata["GroupMembershipRecords"] = $groupMemberCount
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Group Membership Enumeration - Created $groupMemberCount member records from $totalGroups groups" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddWarning("Failed to enumerate full group membership: $($_.Exception.Message)", @{Section="GroupMembers"})
+        }
+        #endregion
+
         #region Azure Directory Roles Discovery via Graph API
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Directory Roles..." -Level "INFO"
         
