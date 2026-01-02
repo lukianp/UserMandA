@@ -44,12 +44,8 @@ interface AzureLogicAppsStats {
   topLocations: { name: string; count: number }[];
 }
 
-interface ColumnDef {
-  key: string;
-  header: string;
-  width: number;
-  getValue?: (row: any) => any;
-}
+// Using AG Grid ColDef - field and headerName are required for proper rendering
+import { ColDef } from 'ag-grid-community';
 
 async function loadCsvFile<T>(basePath: string, filename: string): Promise<T[]> {
   const fullPath = `${basePath}\\Raw\\${filename}`;
@@ -159,18 +155,18 @@ export const useAzureLogicAppsDiscoveredLogic = () => {
     );
   }, [searchText, logicApps]);
 
-  const columns = useMemo<ColumnDef[]>(() => {
+  const columns = useMemo<ColDef[]>(() => {
     return [
-      { key: 'Name', header: 'Name', width: 200 },
-      { key: 'State', header: 'State', width: 100 },
-      { key: 'Location', header: 'Location', width: 120 },
-      { key: 'Sku', header: 'SKU', width: 100 },
-      { key: 'ResourceGroupName', header: 'Resource Group', width: 180 },
-      { key: 'TriggerCount', header: 'Triggers', width: 80 },
-      { key: 'RecentRunCount', header: 'Recent Runs', width: 100 },
-      { key: 'LastRunStatus', header: 'Last Status', width: 100 },
-      { key: 'LastRunTime', header: 'Last Run', width: 150 },
-      { key: 'Version', header: 'Version', width: 100 },
+      { field: 'Name', headerName: 'Name', width: 200 },
+      { field: 'State', headerName: 'State', width: 100 },
+      { field: 'Location', headerName: 'Location', width: 120 },
+      { field: 'Sku', headerName: 'SKU', width: 100 },
+      { field: 'ResourceGroupName', headerName: 'Resource Group', width: 180 },
+      { field: 'TriggerCount', headerName: 'Triggers', width: 80 },
+      { field: 'RecentRunCount', headerName: 'Recent Runs', width: 100 },
+      { field: 'LastRunStatus', headerName: 'Last Status', width: 100 },
+      { field: 'LastRunTime', headerName: 'Last Run', width: 150 },
+      { field: 'Version', headerName: 'Version', width: 100 },
     ];
   }, []);
 

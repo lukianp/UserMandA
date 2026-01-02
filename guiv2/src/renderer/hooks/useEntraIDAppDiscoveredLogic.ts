@@ -22,6 +22,8 @@ interface AppRegistration {
   OwnerCount: string;
   Owners: string;
   RequiredResourceAccessCount: string;
+  RequiredResourceAppIds: string; // NEW: Semicolon-separated list of API AppIds (for IT Component linking)
+  RequiredPermissionCount: string; // NEW: Total number of permissions requested
   AppRoleCount: string;
   OAuth2PermissionScopeCount: string;
   KeyCredentialCount: string;
@@ -121,6 +123,14 @@ interface Statistics {
   spTypeBreakdown: Record<string, number>;
   topAppsBySecrets: Array<{ name: string; count: number }>;
   topPublishers: Array<{ name: string; count: number }>;
+  // API Dependency statistics (NEW - for IT Component linking)
+  appsWithApiDependencies: number;
+  totalApiDependencies: number;
+  uniqueApiDependencies: number;
+  topApiDependencies: Array<{ appId: string; count: number }>;
+  discoverySuccessPercentage: number;
+  dataSourcesReceivedCount: number;
+  dataSourcesTotal: number;
 }
 
 export function useEntraIDAppDiscoveredLogic() {
@@ -193,7 +203,7 @@ export function useEntraIDAppDiscoveredLogic() {
           console.warn(`File not found or unreadable: ${filePath}`, readError);
           return null;
         })
-        .then((content: string | undefined) => {
+        .then((content: string | null) => {
           if (!content) {
             resolve([]);
             return;
@@ -284,6 +294,44 @@ export function useEntraIDAppDiscoveredLogic() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
+    // API Dependency statistics (NEW - for IT Component linking)
+    const appsWithApiDeps = appRegistrations.filter(
+      (a) => a.RequiredResourceAppIds && a.RequiredResourceAppIds.trim() !== ''
+    );
+    const appsWithApiDependencies = appsWithApiDeps.length;
+
+    // Count all API dependencies
+    const allApiAppIds: string[] = [];
+    appsWithApiDeps.forEach((app) => {
+      const appIds = app.RequiredResourceAppIds.split(';').filter((id) => id.trim() !== '');
+      allApiAppIds.push(...appIds);
+    });
+    const totalApiDependencies = allApiAppIds.length;
+    const uniqueApiDependencies = new Set(allApiAppIds).size;
+
+    // Top API dependencies (which APIs are used most)
+    const apiDepCounts: Record<string, number> = {};
+    allApiAppIds.forEach((appId) => {
+      apiDepCounts[appId] = (apiDepCounts[appId] || 0) + 1;
+    });
+    const topApiDependencies = Object.entries(apiDepCounts)
+      .map(([appId, count]) => ({ appId, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Discovery Success % calculation
+    const expectedSources = [
+      { name: 'AppRegistrations', hasData: appRegistrations.length > 0, weight: 30 },
+      { name: 'EnterpriseApps', hasData: enterpriseApps.length > 0, weight: 25 },
+      { name: 'ServicePrincipals', hasData: servicePrincipals.length > 0, weight: 25 },
+      { name: 'ApplicationSecrets', hasData: applicationSecrets.length > 0, weight: 20 },
+    ];
+    const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+    const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+    const discoverySuccessPercentage = Math.round((achievedWeight / totalWeight) * 100);
+    const dataSourcesReceivedCount = expectedSources.filter((s) => s.hasData).length;
+    const dataSourcesTotal = expectedSources.length;
+
     return {
       totalAppRegistrations,
       totalEnterpriseApps,
@@ -301,6 +349,14 @@ export function useEntraIDAppDiscoveredLogic() {
       spTypeBreakdown,
       topAppsBySecrets: appSecretCounts,
       topPublishers,
+      // API Dependency statistics (NEW)
+      appsWithApiDependencies,
+      totalApiDependencies,
+      uniqueApiDependencies,
+      topApiDependencies,
+      discoverySuccessPercentage,
+      dataSourcesReceivedCount,
+      dataSourcesTotal,
     };
   }, [appRegistrations, enterpriseApps, servicePrincipals, applicationSecrets]);
 

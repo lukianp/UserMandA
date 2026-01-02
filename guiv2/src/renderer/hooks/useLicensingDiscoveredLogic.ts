@@ -36,13 +36,8 @@ interface LicensingDiscoveredState {
   };
 }
 
-// Column definition for data grid
-interface ColumnDef {
-  key: string;
-  header: string;
-  width: number;
-  getValue?: (row: any) => any;
-}
+// Using AG Grid ColDef - field and headerName are required for proper rendering
+import { ColDef } from 'ag-grid-community';
 
 // Helper function to load and parse CSV file
 async function loadCsvFile<T>(basePath: string, filename: string): Promise<T[]> {
@@ -271,48 +266,61 @@ export const useLicensingDiscoveredLogic = () => {
     }
   }, [state.activeTab, filteredLicenses, filteredUserAssignments, filteredServicePlans]);
 
-  // Columns based on active tab
-  const columns = useMemo<ColumnDef[]>(() => {
+  // Columns based on active tab - using AG Grid ColDef format
+  const columns = useMemo<ColDef[]>(() => {
     switch (state.activeTab) {
       case 'licenses':
         return [
-          { key: 'skuPartNumber', header: 'Product', width: 250, getValue: (row: any) => getLicenseDisplayName(row.skuPartNumber) || row.skuPartNumber },
-          { key: 'status', header: 'Status', width: 100 },
-          { key: 'prepaidUnits', header: 'Total', width: 80, getValue: (row: any) => row.prepaidUnits || row.PrepaidUnits || 0 },
-          { key: 'consumedUnits', header: 'Assigned', width: 80, getValue: (row: any) => row.consumedUnits || row.ConsumedUnits || 0 },
-          { key: 'availableUnits', header: 'Available', width: 80, getValue: (row: any) => row.availableUnits || row.AvailableUnits || 0 },
-          { key: 'utilizationPercent', header: 'Utilization', width: 100, getValue: (row: any) => `${row.utilizationPercent || row.UtilizationPercent || 0}%` },
-          { key: 'estimatedCost', header: 'Est. Monthly Cost', width: 120, getValue: (row: any) => {
-            const cost = calculateLicenseCost(row.skuPartNumber || row.SkuPartNumber, row.prepaidUnits || row.PrepaidUnits || 0);
+          { field: 'skuPartNumber', headerName: 'Product', width: 250, valueGetter: (params) => getLicenseDisplayName(params.data?.skuPartNumber) || params.data?.skuPartNumber },
+          { field: 'status', headerName: 'Status', width: 100 },
+          { field: 'prepaidUnits', headerName: 'Total', width: 80, valueGetter: (params) => params.data?.prepaidUnits || params.data?.PrepaidUnits || 0 },
+          { field: 'consumedUnits', headerName: 'Assigned', width: 80, valueGetter: (params) => params.data?.consumedUnits || params.data?.ConsumedUnits || 0 },
+          { field: 'availableUnits', headerName: 'Available', width: 80, valueGetter: (params) => params.data?.availableUnits || params.data?.AvailableUnits || 0 },
+          { field: 'utilizationPercent', headerName: 'Utilization', width: 100, valueGetter: (params) => `${params.data?.utilizationPercent || params.data?.UtilizationPercent || 0}%` },
+          { field: 'estimatedCost', headerName: 'Est. Monthly Cost', width: 120, valueGetter: (params) => {
+            const cost = calculateLicenseCost(params.data?.skuPartNumber || params.data?.SkuPartNumber, params.data?.prepaidUnits || params.data?.PrepaidUnits || 0);
             return cost > 0 ? `$${cost.toLocaleString()}` : '-';
           }},
         ];
       case 'userAssignments':
         return [
-          { key: 'displayName', header: 'User', width: 200, getValue: (row: any) => row.displayName || row.DisplayName },
-          { key: 'userPrincipalName', header: 'Email', width: 250, getValue: (row: any) => row.userPrincipalName || row.UserPrincipalName },
-          { key: 'skuPartNumber', header: 'License', width: 200, getValue: (row: any) => getLicenseDisplayName(row.skuPartNumber || row.SkuPartNumber) },
-          { key: 'assignmentSource', header: 'Source', width: 100, getValue: (row: any) => row.assignmentSource || row.AssignmentSource || 'Direct' },
-          { key: 'disabledPlanCount', header: 'Disabled Plans', width: 120, getValue: (row: any) => row.disabledPlanCount || row.DisabledPlanCount || 0 },
-          { key: 'lastUpdated', header: 'Last Updated', width: 150, getValue: (row: any) => row.lastUpdated || row.LastUpdated || '-' },
+          { field: 'displayName', headerName: 'User', width: 200, valueGetter: (params) => params.data?.displayName || params.data?.DisplayName },
+          { field: 'userPrincipalName', headerName: 'Email', width: 250, valueGetter: (params) => params.data?.userPrincipalName || params.data?.UserPrincipalName },
+          { field: 'skuPartNumber', headerName: 'License', width: 200, valueGetter: (params) => getLicenseDisplayName(params.data?.skuPartNumber || params.data?.SkuPartNumber) },
+          { field: 'assignmentSource', headerName: 'Source', width: 100, valueGetter: (params) => params.data?.assignmentSource || params.data?.AssignmentSource || 'Direct' },
+          { field: 'disabledPlanCount', headerName: 'Disabled Plans', width: 120, valueGetter: (params) => params.data?.disabledPlanCount || params.data?.DisabledPlanCount || 0 },
+          { field: 'lastUpdated', headerName: 'Last Updated', width: 150, valueGetter: (params) => params.data?.lastUpdated || params.data?.LastUpdated || '-' },
         ];
       case 'servicePlans':
         return [
-          { key: 'displayName', header: 'User', width: 180, getValue: (row: any) => row.displayName || row.DisplayName },
-          { key: 'skuPartNumber', header: 'License', width: 180, getValue: (row: any) => getLicenseDisplayName(row.skuPartNumber || row.SkuPartNumber) },
-          { key: 'servicePlanName', header: 'Service Plan', width: 250, getValue: (row: any) => row.servicePlanName || row.ServicePlanName },
-          { key: 'provisioningStatus', header: 'Status', width: 120, getValue: (row: any) => row.provisioningStatus || row.ProvisioningStatus },
+          { field: 'displayName', headerName: 'User', width: 180, valueGetter: (params) => params.data?.displayName || params.data?.DisplayName },
+          { field: 'skuPartNumber', headerName: 'License', width: 180, valueGetter: (params) => getLicenseDisplayName(params.data?.skuPartNumber || params.data?.SkuPartNumber) },
+          { field: 'servicePlanName', headerName: 'Service Plan', width: 250, valueGetter: (params) => params.data?.servicePlanName || params.data?.ServicePlanName },
+          { field: 'provisioningStatus', headerName: 'Status', width: 120, valueGetter: (params) => params.data?.provisioningStatus || params.data?.ProvisioningStatus },
         ];
       default:
         return [
-          { key: 'skuPartNumber', header: 'Product', width: 250 },
-          { key: 'status', header: 'Status', width: 100 },
+          { field: 'skuPartNumber', headerName: 'Product', width: 250 },
+          { field: 'status', headerName: 'Status', width: 100 },
         ];
     }
   }, [state.activeTab]);
 
   // Enhanced Statistics
   const stats = useMemo<EnhancedLicenseStats | null>(() => {
+    // Discovery Success Calculation (weighted by importance)
+    const expectedSources = [
+      { name: 'Licenses', hasData: state.licenses.length > 0, weight: 35 },
+      { name: 'UserAssignments', hasData: state.userAssignments.length > 0, weight: 30 },
+      { name: 'ServicePlans', hasData: state.servicePlans.length > 0, weight: 20 },
+      { name: 'Summary', hasData: state.summary !== null, weight: 15 },
+    ];
+    const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+    const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+    const discoverySuccessPercentage = Math.round((achievedWeight / totalWeight) * 100);
+    const dataSourcesReceivedCount = expectedSources.filter(s => s.hasData).length;
+    const dataSourcesTotal = expectedSources.length;
+
     // Use summary data if available, otherwise calculate
     const summary = state.summary;
 
@@ -431,6 +439,11 @@ export const useLicensingDiscoveredLogic = () => {
     };
 
     return {
+      // Discovery Success metrics
+      discoverySuccessPercentage,
+      dataSourcesReceivedCount,
+      dataSourcesTotal,
+      // Core metrics
       totalLicenses,
       totalAssigned,
       totalAvailable,

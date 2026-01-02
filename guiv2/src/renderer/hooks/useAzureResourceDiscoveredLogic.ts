@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Papa from 'papaparse';
 import { useProfileStore } from '../store/useProfileStore';
 
-type TabType = 'overview' | 'subscriptions' | 'resourcegroups' | 'storage' | 'keyvaults' | 'networks' | 'webapps' | 'nsgs';
+type TabType = 'overview' | 'subscriptions' | 'resourcegroups' | 'storage' | 'keyvaults' | 'networks' | 'webapps' | 'nsgs' | 'groupmembers';
 
 interface Subscription {
   ObjectType: string;
@@ -86,6 +86,20 @@ interface WebApp {
   Kind: string;
 }
 
+interface GroupMember {
+  ObjectType: string;
+  GroupId: string;
+  GroupDisplayName: string;
+  GroupMail: string;
+  GroupType: string;
+  IsDynamicGroup: string | boolean;
+  MemberId: string;
+  MemberDisplayName: string;
+  MemberUPN: string;
+  MemberMail: string;
+  MemberType: string;
+}
+
 interface AzureResourceStats {
   totalResources: number;
   subscriptions: number;
@@ -95,16 +109,21 @@ interface AzureResourceStats {
   virtualNetworks: number;
   nsgs: number;
   webApps: number;
+  groupMembers: number;
+  uniqueGroups: number;
+  membersByType: Record<string, number>;
+  membersByGroupType: Record<string, number>;
   resourcesByLocation: Record<string, number>;
   topLocations: { name: string; count: number }[];
+  // Discovery Success metrics
+  discoverySuccessPercentage: number;
+  dataSourcesReceivedCount: number;
+  dataSourcesTotal: number;
+  dataSourcesReceived: string[];
 }
 
-interface ColumnDef {
-  key: string;
-  header: string;
-  width: number;
-  getValue?: (row: any) => any;
-}
+// Using AG Grid ColDef - field and headerName are required for proper rendering
+import { ColDef } from 'ag-grid-community';
 
 async function loadCsvFile<T>(basePath: string, filename: string): Promise<T[]> {
   const fullPath = `${basePath}\\Raw\\${filename}`;
@@ -137,6 +156,7 @@ export const useAzureResourceDiscoveredLogic = () => {
   const [virtualNetworks, setVirtualNetworks] = useState<VirtualNetwork[]>([]);
   const [nsgs, setNsgs] = useState<NetworkSecurityGroup[]>([]);
   const [webApps, setWebApps] = useState<WebApp[]>([]);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -156,7 +176,7 @@ export const useAzureResourceDiscoveredLogic = () => {
       try {
         const basePath = selectedSourceProfile.dataPath || `C:\\DiscoveryData\\${selectedSourceProfile.companyName}`;
 
-        const [subs, rgs, storage, kv, vnets, nsgData, apps] = await Promise.all([
+        const [subs, rgs, storage, kv, vnets, nsgData, apps, members] = await Promise.all([
           loadCsvFile<Subscription>(basePath, 'AzureResourceDiscovery_Subscriptions.csv'),
           loadCsvFile<ResourceGroup>(basePath, 'AzureResourceDiscovery_ResourceGroups.csv'),
           loadCsvFile<StorageAccount>(basePath, 'AzureResourceDiscovery_StorageAccounts.csv'),
@@ -164,6 +184,7 @@ export const useAzureResourceDiscoveredLogic = () => {
           loadCsvFile<VirtualNetwork>(basePath, 'AzureResourceDiscovery_VirtualNetworks.csv'),
           loadCsvFile<NetworkSecurityGroup>(basePath, 'AzureResourceDiscovery_NetworkSecurityGroups.csv'),
           loadCsvFile<WebApp>(basePath, 'AzureResourceDiscovery_WebApps.csv'),
+          loadCsvFile<GroupMember>(basePath, 'AzureDiscovery_GroupMembers.csv'),
         ]);
 
         setSubscriptions(subs);
@@ -173,6 +194,7 @@ export const useAzureResourceDiscoveredLogic = () => {
         setVirtualNetworks(vnets);
         setNsgs(nsgData);
         setWebApps(apps);
+        setGroupMembers(members);
         setIsLoading(false);
       } catch (err: any) {
         setError(err.message || 'Failed to load data');
@@ -186,7 +208,7 @@ export const useAzureResourceDiscoveredLogic = () => {
   const stats = useMemo<AzureResourceStats | null>(() => {
     const total = subscriptions.length + resourceGroups.length + storageAccounts.length +
                   keyVaults.length + virtualNetworks.length + nsgs.length + webApps.length;
-    if (total === 0) return null;
+    if (total === 0 && groupMembers.length === 0) return null;
 
     const locationCounts: Record<string, number> = {};
     [...resourceGroups, ...storageAccounts, ...keyVaults, ...virtualNetworks, ...nsgs, ...webApps].forEach((r: any) => {
@@ -199,6 +221,35 @@ export const useAzureResourceDiscoveredLogic = () => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
+    // Group membership statistics
+    const uniqueGroupIds = new Set(groupMembers.map(m => m.GroupId));
+    const membersByType: Record<string, number> = {};
+    const membersByGroupType: Record<string, number> = {};
+    groupMembers.forEach(m => {
+      const mType = m.MemberType || 'Unknown';
+      membersByType[mType] = (membersByType[mType] || 0) + 1;
+      const gType = m.GroupType || 'Unknown';
+      membersByGroupType[gType] = (membersByGroupType[gType] || 0) + 1;
+    });
+
+    // Calculate Discovery Success % - weighted by importance for migration
+    const expectedSources = [
+      { name: 'Subscriptions', hasData: subscriptions.length > 0, weight: 20 },
+      { name: 'Resource Groups', hasData: resourceGroups.length > 0, weight: 15 },
+      { name: 'Storage Accounts', hasData: storageAccounts.length > 0, weight: 15 },
+      { name: 'Key Vaults', hasData: keyVaults.length > 0, weight: 10 },
+      { name: 'Virtual Networks', hasData: virtualNetworks.length > 0, weight: 15 },
+      { name: 'Network Security Groups', hasData: nsgs.length > 0, weight: 10 },
+      { name: 'Web Apps', hasData: webApps.length > 0, weight: 5 },
+      { name: 'Group Members', hasData: groupMembers.length > 0, weight: 10 },
+    ];
+    const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+    const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+    const discoverySuccessPercentage = Math.round((achievedWeight / totalWeight) * 100);
+    const dataSourcesReceivedCount = expectedSources.filter(s => s.hasData).length;
+    const dataSourcesTotal = expectedSources.length;
+    const dataSourcesReceived = expectedSources.filter(s => s.hasData).map(s => s.name);
+
     return {
       totalResources: total,
       subscriptions: subscriptions.length,
@@ -208,10 +259,18 @@ export const useAzureResourceDiscoveredLogic = () => {
       virtualNetworks: virtualNetworks.length,
       nsgs: nsgs.length,
       webApps: webApps.length,
+      groupMembers: groupMembers.length,
+      uniqueGroups: uniqueGroupIds.size,
+      membersByType,
+      membersByGroupType,
       resourcesByLocation: locationCounts,
       topLocations,
+      discoverySuccessPercentage,
+      dataSourcesReceivedCount,
+      dataSourcesTotal,
+      dataSourcesReceived,
     };
-  }, [subscriptions, resourceGroups, storageAccounts, keyVaults, virtualNetworks, nsgs, webApps]);
+  }, [subscriptions, resourceGroups, storageAccounts, keyVaults, virtualNetworks, nsgs, webApps, groupMembers]);
 
   const filteredData = useMemo(() => {
     const search = searchText.toLowerCase();
@@ -227,69 +286,80 @@ export const useAzureResourceDiscoveredLogic = () => {
       case 'networks': return filterFn(virtualNetworks);
       case 'nsgs': return filterFn(nsgs);
       case 'webapps': return filterFn(webApps);
+      case 'groupmembers': return filterFn(groupMembers);
       default: return [];
     }
-  }, [activeTab, searchText, subscriptions, resourceGroups, storageAccounts, keyVaults, virtualNetworks, nsgs, webApps]);
+  }, [activeTab, searchText, subscriptions, resourceGroups, storageAccounts, keyVaults, virtualNetworks, nsgs, webApps, groupMembers]);
 
-  const columns = useMemo<ColumnDef[]>(() => {
+  const columns = useMemo<ColDef[]>(() => {
     switch (activeTab) {
       case 'subscriptions':
         return [
-          { key: 'Name', header: 'Name', width: 250 },
-          { key: 'SubscriptionId', header: 'Subscription ID', width: 300 },
-          { key: 'State', header: 'State', width: 100 },
-          { key: 'TenantId', header: 'Tenant ID', width: 300 },
+          { field: 'Name', headerName: 'Name', width: 250 },
+          { field: 'SubscriptionId', headerName: 'Subscription ID', width: 300 },
+          { field: 'State', headerName: 'State', width: 100 },
+          { field: 'TenantId', headerName: 'Tenant ID', width: 300 },
         ];
       case 'resourcegroups':
         return [
-          { key: 'Name', header: 'Name', width: 200 },
-          { key: 'Location', header: 'Location', width: 120 },
-          { key: 'ProvisioningState', header: 'State', width: 100 },
-          { key: 'SubscriptionId', header: 'Subscription', width: 300 },
+          { field: 'Name', headerName: 'Name', width: 200 },
+          { field: 'Location', headerName: 'Location', width: 120 },
+          { field: 'ProvisioningState', headerName: 'State', width: 100 },
+          { field: 'SubscriptionId', headerName: 'Subscription', width: 300 },
         ];
       case 'storage':
         return [
-          { key: 'Name', header: 'Name', width: 220 },
-          { key: 'ResourceGroupName', header: 'Resource Group', width: 180 },
-          { key: 'Location', header: 'Location', width: 120 },
-          { key: 'SkuName', header: 'SKU', width: 120 },
-          { key: 'Kind', header: 'Kind', width: 100 },
-          { key: 'AccessTier', header: 'Access Tier', width: 100 },
-          { key: 'MinimumTlsVersion', header: 'TLS', width: 80 },
+          { field: 'Name', headerName: 'Name', width: 220 },
+          { field: 'ResourceGroupName', headerName: 'Resource Group', width: 180 },
+          { field: 'Location', headerName: 'Location', width: 120 },
+          { field: 'SkuName', headerName: 'SKU', width: 120 },
+          { field: 'Kind', headerName: 'Kind', width: 100 },
+          { field: 'AccessTier', headerName: 'Access Tier', width: 100 },
+          { field: 'MinimumTlsVersion', headerName: 'TLS', width: 80 },
         ];
       case 'keyvaults':
         return [
-          { key: 'VaultName', header: 'Vault Name', width: 200 },
-          { key: 'ResourceGroupName', header: 'Resource Group', width: 180 },
-          { key: 'Location', header: 'Location', width: 120 },
-          { key: 'Sku', header: 'SKU', width: 100 },
-          { key: 'SecretCount', header: 'Secrets', width: 80 },
-          { key: 'KeyCount', header: 'Keys', width: 80 },
-          { key: 'CertificateCount', header: 'Certs', width: 80 },
+          { field: 'VaultName', headerName: 'Vault Name', width: 200 },
+          { field: 'ResourceGroupName', headerName: 'Resource Group', width: 180 },
+          { field: 'Location', headerName: 'Location', width: 120 },
+          { field: 'Sku', headerName: 'SKU', width: 100 },
+          { field: 'SecretCount', headerName: 'Secrets', width: 80 },
+          { field: 'KeyCount', headerName: 'Keys', width: 80 },
+          { field: 'CertificateCount', headerName: 'Certs', width: 80 },
         ];
       case 'networks':
         return [
-          { key: 'Name', header: 'Name', width: 200 },
-          { key: 'ResourceGroupName', header: 'Resource Group', width: 180 },
-          { key: 'Location', header: 'Location', width: 120 },
-          { key: 'AddressSpace', header: 'Address Space', width: 200 },
-          { key: 'SubnetCount', header: 'Subnets', width: 80 },
+          { field: 'Name', headerName: 'Name', width: 200 },
+          { field: 'ResourceGroupName', headerName: 'Resource Group', width: 180 },
+          { field: 'Location', headerName: 'Location', width: 120 },
+          { field: 'AddressSpace', headerName: 'Address Space', width: 200 },
+          { field: 'SubnetCount', headerName: 'Subnets', width: 80 },
         ];
       case 'nsgs':
         return [
-          { key: 'Name', header: 'Name', width: 220 },
-          { key: 'ResourceGroupName', header: 'Resource Group', width: 180 },
-          { key: 'Location', header: 'Location', width: 120 },
-          { key: 'RuleCount', header: 'Rules', width: 80 },
+          { field: 'Name', headerName: 'Name', width: 220 },
+          { field: 'ResourceGroupName', headerName: 'Resource Group', width: 180 },
+          { field: 'Location', headerName: 'Location', width: 120 },
+          { field: 'RuleCount', headerName: 'Rules', width: 80 },
         ];
       case 'webapps':
         return [
-          { key: 'Name', header: 'Name', width: 200 },
-          { key: 'ResourceGroupName', header: 'Resource Group', width: 180 },
-          { key: 'Location', header: 'Location', width: 120 },
-          { key: 'State', header: 'State', width: 100 },
-          { key: 'Kind', header: 'Kind', width: 100 },
-          { key: 'DefaultHostName', header: 'Host Name', width: 250 },
+          { field: 'Name', headerName: 'Name', width: 200 },
+          { field: 'ResourceGroupName', headerName: 'Resource Group', width: 180 },
+          { field: 'Location', headerName: 'Location', width: 120 },
+          { field: 'State', headerName: 'State', width: 100 },
+          { field: 'Kind', headerName: 'Kind', width: 100 },
+          { field: 'DefaultHostName', headerName: 'Host Name', width: 250 },
+        ];
+      case 'groupmembers':
+        return [
+          { field: 'GroupDisplayName', headerName: 'Group Name', width: 200 },
+          { field: 'GroupType', headerName: 'Group Type', width: 140 },
+          { field: 'MemberDisplayName', headerName: 'Member Name', width: 200 },
+          { field: 'MemberUPN', headerName: 'Member UPN', width: 250 },
+          { field: 'MemberType', headerName: 'Member Type', width: 120 },
+          { field: 'GroupMail', headerName: 'Group Email', width: 200 },
+          { field: 'IsDynamicGroup', headerName: 'Dynamic', width: 80 },
         ];
       default:
         return [];
@@ -320,7 +390,7 @@ export const useAzureResourceDiscoveredLogic = () => {
     const basePath = selectedSourceProfile?.dataPath || `C:\\DiscoveryData\\${selectedSourceProfile?.companyName}`;
     if (basePath && selectedSourceProfile?.companyName) {
       try {
-        const [subs, rgs, storage, kv, vnets, nsgData, apps] = await Promise.all([
+        const [subs, rgs, storage, kv, vnets, nsgData, apps, members] = await Promise.all([
           loadCsvFile<Subscription>(basePath, 'AzureResourceDiscovery_Subscriptions.csv'),
           loadCsvFile<ResourceGroup>(basePath, 'AzureResourceDiscovery_ResourceGroups.csv'),
           loadCsvFile<StorageAccount>(basePath, 'AzureResourceDiscovery_StorageAccounts.csv'),
@@ -328,6 +398,7 @@ export const useAzureResourceDiscoveredLogic = () => {
           loadCsvFile<VirtualNetwork>(basePath, 'AzureResourceDiscovery_VirtualNetworks.csv'),
           loadCsvFile<NetworkSecurityGroup>(basePath, 'AzureResourceDiscovery_NetworkSecurityGroups.csv'),
           loadCsvFile<WebApp>(basePath, 'AzureResourceDiscovery_WebApps.csv'),
+          loadCsvFile<GroupMember>(basePath, 'AzureDiscovery_GroupMembers.csv'),
         ]);
         setSubscriptions(subs);
         setResourceGroups(rgs);
@@ -336,6 +407,7 @@ export const useAzureResourceDiscoveredLogic = () => {
         setVirtualNetworks(vnets);
         setNsgs(nsgData);
         setWebApps(apps);
+        setGroupMembers(members);
         setIsLoading(false);
       } catch (err: any) {
         setError(err.message);
@@ -345,7 +417,7 @@ export const useAzureResourceDiscoveredLogic = () => {
   }, [selectedSourceProfile?.companyName, selectedSourceProfile?.dataPath]);
 
   return {
-    subscriptions, resourceGroups, storageAccounts, keyVaults, virtualNetworks, nsgs, webApps,
+    subscriptions, resourceGroups, storageAccounts, keyVaults, virtualNetworks, nsgs, webApps, groupMembers,
     isLoading, error, activeTab, searchText, stats, columns, filteredData,
     setActiveTab, setSearchText, reloadData, exportToCSV,
     clearError: () => setError(null),

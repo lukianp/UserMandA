@@ -9,7 +9,7 @@ import Papa from 'papaparse';
 import { useProfileStore } from '../store/useProfileStore';
 
 // Tab types for the view
-type TabType = 'overview' | 'users' | 'groups' | 'teams' | 'sharepoint' | 'applications' | 'security';
+type TabType = 'overview' | 'users' | 'groups' | 'groupmembers' | 'teams' | 'sharepoint' | 'applications' | 'security';
 
 // Data types from CSV
 interface M365User {
@@ -88,6 +88,17 @@ interface DirectoryRole {
   Members: string;
 }
 
+// Group membership data - full enumeration of all group members
+interface GroupMember {
+  GroupId: string;
+  GroupDisplayName: string;
+  GroupType: string;
+  MemberId: string;
+  MemberDisplayName: string;
+  MemberUPN: string;
+  MemberType: string;
+}
+
 // Stats interface
 interface M365Stats {
   // User metrics
@@ -110,6 +121,10 @@ interface M365Stats {
   dynamicGroups: number;
   syncedGroups: number;
 
+  // Group Members
+  totalGroupMembers: number;
+  uniqueGroupsWithMembers: number;
+
   // Services
   totalTeams: number;
   totalSharePointSites: number;
@@ -119,11 +134,17 @@ interface M365Stats {
   // Top lists
   topDepartments: { name: string; count: number }[];
   topGroupsByMembers: { name: string; count: number }[];
+
+  // Discovery Success metrics
+  discoverySuccessPercentage: number;
+  dataSourcesReceivedCount: number;
+  dataSourcesTotal: number;
 }
 
 interface EntraIDM365DiscoveredState {
   users: M365User[];
   groups: M365Group[];
+  groupMembers: GroupMember[];
   teams: M365Team[];
   sharePointSites: SharePointSite[];
   applications: M365Application[];
@@ -141,13 +162,8 @@ interface EntraIDM365DiscoveredState {
   };
 }
 
-// Column definition for data grid
-interface ColumnDef {
-  key: string;
-  header: string;
-  width: number;
-  getValue?: (row: any) => any;
-}
+// Using AG Grid ColDef - field and headerName are required for proper rendering
+import { ColDef } from 'ag-grid-community';
 
 // Helper function to load and parse CSV file
 async function loadCsvFile<T>(basePath: string, filename: string): Promise<T[]> {
@@ -197,6 +213,7 @@ export const useEntraIDM365DiscoveredLogic = () => {
   const [state, setState] = useState<EntraIDM365DiscoveredState>({
     users: [],
     groups: [],
+    groupMembers: [],
     teams: [],
     sharePointSites: [],
     applications: [],
@@ -228,9 +245,10 @@ export const useEntraIDM365DiscoveredLogic = () => {
         const basePath = selectedSourceProfile.dataPath || `C:\\DiscoveryData\\${selectedSourceProfile.companyName}`;
 
         // Load all M365 CSV files in parallel
-        const [users, groups, teams, sharePointSites, applications, directoryRoles] = await Promise.all([
+        const [users, groups, groupMembers, teams, sharePointSites, applications, directoryRoles] = await Promise.all([
           loadCsvFile<M365User>(basePath, 'AzureDiscovery_Users.csv'),
           loadCsvFile<M365Group>(basePath, 'AzureDiscovery_Groups.csv'),
+          loadCsvFile<GroupMember>(basePath, 'AzureDiscovery_GroupMembers.csv'),
           loadCsvFile<M365Team>(basePath, 'AzureDiscovery_MicrosoftTeams.csv'),
           loadCsvFile<SharePointSite>(basePath, 'AzureDiscovery_SharePointSites.csv'),
           loadCsvFile<M365Application>(basePath, 'AzureDiscovery_Applications.csv'),
@@ -241,6 +259,7 @@ export const useEntraIDM365DiscoveredLogic = () => {
           ...prev,
           users,
           groups,
+          groupMembers,
           teams,
           sharePointSites,
           applications,
@@ -386,6 +405,23 @@ export const useEntraIDM365DiscoveredLogic = () => {
     return filtered;
   }, [state.applications, state.filter]);
 
+  // Filtered group members
+  const filteredGroupMembers = useMemo(() => {
+    let filtered = [...state.groupMembers];
+
+    if (state.filter.searchText) {
+      const search = state.filter.searchText.toLowerCase();
+      filtered = filtered.filter(member =>
+        member.GroupDisplayName?.toLowerCase().includes(search) ||
+        member.MemberDisplayName?.toLowerCase().includes(search) ||
+        member.MemberUPN?.toLowerCase().includes(search) ||
+        member.GroupType?.toLowerCase().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [state.groupMembers, state.filter]);
+
   // Active tab data
   const filteredData = useMemo(() => {
     switch (state.activeTab) {
@@ -393,6 +429,8 @@ export const useEntraIDM365DiscoveredLogic = () => {
         return filteredUsers;
       case 'groups':
         return filteredGroups;
+      case 'groupmembers':
+        return filteredGroupMembers;
       case 'teams':
         return filteredTeams;
       case 'sharepoint':
@@ -404,71 +442,79 @@ export const useEntraIDM365DiscoveredLogic = () => {
       default:
         return filteredUsers;
     }
-  }, [state.activeTab, filteredUsers, filteredGroups, filteredTeams, filteredSharePointSites, filteredApplications, state.directoryRoles]);
+  }, [state.activeTab, filteredUsers, filteredGroups, filteredGroupMembers, filteredTeams, filteredSharePointSites, filteredApplications, state.directoryRoles]);
 
-  // Columns based on active tab
-  const columns = useMemo<ColumnDef[]>(() => {
+  // Columns based on active tab - using AG Grid ColDef format
+  const columns = useMemo<ColDef[]>(() => {
     switch (state.activeTab) {
       case 'users':
         return [
-          { key: 'DisplayName', header: 'Display Name', width: 200 },
-          { key: 'UserPrincipalName', header: 'UPN', width: 250 },
-          { key: 'Mail', header: 'Email', width: 220 },
-          { key: 'JobTitle', header: 'Job Title', width: 150 },
-          { key: 'Department', header: 'Department', width: 130 },
-          { key: 'AccountEnabled', header: 'Enabled', width: 80, getValue: (row: any) => toBool(row.AccountEnabled) ? 'Yes' : 'No' },
-          { key: 'UserType', header: 'Type', width: 80 },
-          { key: 'LicenseCount', header: 'Licenses', width: 80 },
-          { key: 'OnPremisesSyncEnabled', header: 'Synced', width: 80, getValue: (row: any) => toBool(row.OnPremisesSyncEnabled) ? 'Yes' : 'No' },
-          { key: 'GroupMembershipCount', header: 'Groups', width: 80 },
-          { key: 'CreatedDateTime', header: 'Created', width: 150 },
+          { field: 'DisplayName', headerName: 'Display Name', width: 200 },
+          { field: 'UserPrincipalName', headerName: 'UPN', width: 250 },
+          { field: 'Mail', headerName: 'Email', width: 220 },
+          { field: 'JobTitle', headerName: 'Job Title', width: 150 },
+          { field: 'Department', headerName: 'Department', width: 130 },
+          { field: 'AccountEnabled', headerName: 'Enabled', width: 80, valueGetter: (params) => toBool(params.data?.AccountEnabled) ? 'Yes' : 'No' },
+          { field: 'UserType', headerName: 'Type', width: 80 },
+          { field: 'LicenseCount', headerName: 'Licenses', width: 80 },
+          { field: 'OnPremisesSyncEnabled', headerName: 'Synced', width: 80, valueGetter: (params) => toBool(params.data?.OnPremisesSyncEnabled) ? 'Yes' : 'No' },
+          { field: 'GroupMembershipCount', headerName: 'Groups', width: 80 },
+          { field: 'CreatedDateTime', headerName: 'Created', width: 150 },
         ];
       case 'groups':
         return [
-          { key: 'DisplayName', header: 'Display Name', width: 220 },
-          { key: 'Mail', header: 'Email', width: 220 },
-          { key: 'GroupType', header: 'Type', width: 140 },
-          { key: 'Visibility', header: 'Visibility', width: 100 },
-          { key: 'MemberCount', header: 'Members', width: 90 },
-          { key: 'OwnerCount', header: 'Owners', width: 80 },
-          { key: 'SecurityEnabled', header: 'Security', width: 80, getValue: (row: any) => toBool(row.SecurityEnabled) ? 'Yes' : 'No' },
-          { key: 'MailEnabled', header: 'Mail', width: 70, getValue: (row: any) => toBool(row.MailEnabled) ? 'Yes' : 'No' },
-          { key: 'IsDynamic', header: 'Dynamic', width: 80, getValue: (row: any) => toBool(row.IsDynamic) ? 'Yes' : 'No' },
-          { key: 'CreatedDateTime', header: 'Created', width: 150 },
+          { field: 'DisplayName', headerName: 'Display Name', width: 220 },
+          { field: 'Mail', headerName: 'Email', width: 220 },
+          { field: 'GroupType', headerName: 'Type', width: 140 },
+          { field: 'Visibility', headerName: 'Visibility', width: 100 },
+          { field: 'MemberCount', headerName: 'Members', width: 90 },
+          { field: 'OwnerCount', headerName: 'Owners', width: 80 },
+          { field: 'SecurityEnabled', headerName: 'Security', width: 80, valueGetter: (params) => toBool(params.data?.SecurityEnabled) ? 'Yes' : 'No' },
+          { field: 'MailEnabled', headerName: 'Mail', width: 70, valueGetter: (params) => toBool(params.data?.MailEnabled) ? 'Yes' : 'No' },
+          { field: 'IsDynamic', headerName: 'Dynamic', width: 80, valueGetter: (params) => toBool(params.data?.IsDynamic) ? 'Yes' : 'No' },
+          { field: 'CreatedDateTime', headerName: 'Created', width: 150 },
+        ];
+      case 'groupmembers':
+        return [
+          { field: 'GroupDisplayName', headerName: 'Group Name', width: 220 },
+          { field: 'GroupType', headerName: 'Group Type', width: 140 },
+          { field: 'MemberDisplayName', headerName: 'Member Name', width: 200 },
+          { field: 'MemberUPN', headerName: 'Member UPN', width: 250 },
+          { field: 'MemberType', headerName: 'Member Type', width: 120 },
         ];
       case 'teams':
         return [
-          { key: 'DisplayName', header: 'Team Name', width: 250 },
-          { key: 'Description', header: 'Description', width: 350 },
-          { key: 'Visibility', header: 'Visibility', width: 100 },
-          { key: 'CreatedDateTime', header: 'Created', width: 180 },
+          { field: 'DisplayName', headerName: 'Team Name', width: 250 },
+          { field: 'Description', headerName: 'Description', width: 350 },
+          { field: 'Visibility', headerName: 'Visibility', width: 100 },
+          { field: 'CreatedDateTime', headerName: 'Created', width: 180 },
         ];
       case 'sharepoint':
         return [
-          { key: 'DisplayName', header: 'Site Name', width: 250 },
-          { key: 'WebUrl', header: 'URL', width: 400 },
-          { key: 'CreatedDateTime', header: 'Created', width: 180 },
-          { key: 'LastModifiedDateTime', header: 'Last Modified', width: 180 },
+          { field: 'DisplayName', headerName: 'Site Name', width: 250 },
+          { field: 'WebUrl', headerName: 'URL', width: 400 },
+          { field: 'CreatedDateTime', headerName: 'Created', width: 180 },
+          { field: 'LastModifiedDateTime', headerName: 'Last Modified', width: 180 },
         ];
       case 'applications':
         return [
-          { key: 'DisplayName', header: 'Application Name', width: 250 },
-          { key: 'AppId', header: 'App ID', width: 300 },
-          { key: 'SignInAudience', header: 'Sign-In Audience', width: 180 },
-          { key: 'SecretCount', header: 'Secrets', width: 80 },
-          { key: 'SecretExpirationWarning', header: 'Secret Warning', width: 150 },
-          { key: 'CreatedDateTime', header: 'Created', width: 180 },
+          { field: 'DisplayName', headerName: 'Application Name', width: 250 },
+          { field: 'AppId', headerName: 'App ID', width: 300 },
+          { field: 'SignInAudience', headerName: 'Sign-In Audience', width: 180 },
+          { field: 'SecretCount', headerName: 'Secrets', width: 80 },
+          { field: 'SecretExpirationWarning', headerName: 'Secret Warning', width: 150 },
+          { field: 'CreatedDateTime', headerName: 'Created', width: 180 },
         ];
       case 'security':
         return [
-          { key: 'DisplayName', header: 'Role Name', width: 280 },
-          { key: 'Description', header: 'Description', width: 400 },
-          { key: 'MemberCount', header: 'Members', width: 100 },
-          { key: 'Members', header: 'Assigned To', width: 300 },
+          { field: 'DisplayName', headerName: 'Role Name', width: 280 },
+          { field: 'Description', headerName: 'Description', width: 400 },
+          { field: 'MemberCount', headerName: 'Members', width: 100 },
+          { field: 'Members', headerName: 'Assigned To', width: 300 },
         ];
       default:
         return [
-          { key: 'DisplayName', header: 'Name', width: 250 },
+          { field: 'DisplayName', headerName: 'Name', width: 250 },
         ];
     }
   }, [state.activeTab]);
@@ -525,6 +571,27 @@ export const useEntraIDM365DiscoveredLogic = () => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
+    // Group Members metrics
+    const groupMembers = state.groupMembers;
+    const totalGroupMembers = groupMembers.length;
+    const uniqueGroupsWithMembers = new Set(groupMembers.map(m => m.GroupId)).size;
+
+    // Discovery Success calculation - weighted by importance
+    const expectedSources = [
+      { name: 'Users', hasData: users.length > 0, weight: 20 },
+      { name: 'Groups', hasData: groups.length > 0, weight: 15 },
+      { name: 'Group Members', hasData: groupMembers.length > 0, weight: 15 },
+      { name: 'Teams', hasData: state.teams.length > 0, weight: 15 },
+      { name: 'SharePoint Sites', hasData: state.sharePointSites.length > 0, weight: 15 },
+      { name: 'Applications', hasData: state.applications.length > 0, weight: 10 },
+      { name: 'Directory Roles', hasData: state.directoryRoles.length > 0, weight: 10 },
+    ];
+    const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+    const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+    const discoverySuccessPercentage = Math.round((achievedWeight / totalWeight) * 100);
+    const dataSourcesReceivedCount = expectedSources.filter(s => s.hasData).length;
+    const dataSourcesTotal = expectedSources.length;
+
     return {
       totalUsers,
       activeUsers,
@@ -540,14 +607,19 @@ export const useEntraIDM365DiscoveredLogic = () => {
       distributionLists,
       dynamicGroups,
       syncedGroups,
+      totalGroupMembers,
+      uniqueGroupsWithMembers,
       totalTeams: state.teams.length,
       totalSharePointSites: state.sharePointSites.length,
       totalApplications: state.applications.length,
       totalDirectoryRoles: state.directoryRoles.length,
       topDepartments,
       topGroupsByMembers,
+      discoverySuccessPercentage,
+      dataSourcesReceivedCount,
+      dataSourcesTotal,
     };
-  }, [state.users, state.groups, state.teams, state.sharePointSites, state.applications, state.directoryRoles]);
+  }, [state.users, state.groups, state.groupMembers, state.teams, state.sharePointSites, state.applications, state.directoryRoles]);
 
   // Export functions
   const exportToCSV = useCallback((data: any[], filename: string) => {
@@ -589,9 +661,10 @@ export const useEntraIDM365DiscoveredLogic = () => {
 
     if (basePath && selectedSourceProfile?.companyName) {
       try {
-        const [users, groups, teams, sharePointSites, applications, directoryRoles] = await Promise.all([
+        const [users, groups, groupMembers, teams, sharePointSites, applications, directoryRoles] = await Promise.all([
           loadCsvFile<M365User>(basePath, 'AzureDiscovery_Users.csv'),
           loadCsvFile<M365Group>(basePath, 'AzureDiscovery_Groups.csv'),
+          loadCsvFile<GroupMember>(basePath, 'AzureDiscovery_GroupMembers.csv'),
           loadCsvFile<M365Team>(basePath, 'AzureDiscovery_MicrosoftTeams.csv'),
           loadCsvFile<SharePointSite>(basePath, 'AzureDiscovery_SharePointSites.csv'),
           loadCsvFile<M365Application>(basePath, 'AzureDiscovery_Applications.csv'),
@@ -602,6 +675,7 @@ export const useEntraIDM365DiscoveredLogic = () => {
           ...prev,
           users,
           groups,
+          groupMembers,
           teams,
           sharePointSites,
           applications,
@@ -618,6 +692,7 @@ export const useEntraIDM365DiscoveredLogic = () => {
     // State
     users: state.users,
     groups: state.groups,
+    groupMembers: state.groupMembers,
     teams: state.teams,
     sharePointSites: state.sharePointSites,
     applications: state.applications,
@@ -633,6 +708,7 @@ export const useEntraIDM365DiscoveredLogic = () => {
     filteredData,
     filteredUsers,
     filteredGroups,
+    filteredGroupMembers,
     filteredTeams,
     filteredSharePointSites,
     filteredApplications,

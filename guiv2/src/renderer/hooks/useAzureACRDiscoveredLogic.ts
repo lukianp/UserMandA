@@ -39,14 +39,13 @@ interface AzureACRStats {
   registriesByLocation: Record<string, number>;
   topLocations: { name: string; count: number }[];
   registriesBySku: { sku: string; count: number }[];
+  discoverySuccessPercentage: number;
+  dataSourcesReceivedCount: number;
+  dataSourcesTotal: number;
 }
 
-interface ColumnDef {
-  key: string;
-  header: string;
-  width: number;
-  getValue?: (row: any) => any;
-}
+// Using AG Grid ColDef - field and headerName are required for proper rendering
+import { ColDef } from 'ag-grid-community';
 
 async function loadCsvFile<T>(basePath: string, filename: string): Promise<T[]> {
   const fullPath = `${basePath}\\Raw\\${filename}`;
@@ -112,6 +111,16 @@ export const useAzureACRDiscoveredLogic = () => {
   const stats = useMemo<AzureACRStats | null>(() => {
     if (registries.length === 0) return null;
 
+    // Discovery Success
+    const expectedSources = [
+      { name: 'ContainerRegistries', hasData: registries.length > 0, weight: 100 },
+    ];
+    const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+    const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+    const discoverySuccessPercentage = Math.round((achievedWeight / totalWeight) * 100);
+    const dataSourcesReceivedCount = expectedSources.filter(s => s.hasData).length;
+    const dataSourcesTotal = expectedSources.length;
+
     const locationCounts: Record<string, number> = {};
     const skuCounts: Record<string, number> = { Premium: 0, Standard: 0, Basic: 0 };
     let adminEnabled = 0;
@@ -158,6 +167,9 @@ export const useAzureACRDiscoveredLogic = () => {
       registriesByLocation: locationCounts,
       topLocations,
       registriesBySku,
+      discoverySuccessPercentage,
+      dataSourcesReceivedCount,
+      dataSourcesTotal,
     };
   }, [registries]);
 
@@ -169,16 +181,16 @@ export const useAzureACRDiscoveredLogic = () => {
     );
   }, [searchText, registries]);
 
-  const columns = useMemo<ColumnDef[]>(() => {
+  const columns = useMemo<ColDef[]>(() => {
     return [
-      { key: 'Name', header: 'Registry Name', width: 200 },
-      { key: 'LoginServer', header: 'Login Server', width: 250 },
-      { key: 'Location', header: 'Location', width: 120 },
-      { key: 'Sku', header: 'SKU', width: 100 },
-      { key: 'ResourceGroupName', header: 'Resource Group', width: 180 },
-      { key: 'AdminUserEnabled', header: 'Admin Enabled', width: 120 },
-      { key: 'PublicNetworkAccess', header: 'Public Access', width: 120 },
-      { key: 'ProvisioningState', header: 'State', width: 100 },
+      { field: 'Name', headerName: 'Registry Name', width: 200 },
+      { field: 'LoginServer', headerName: 'Login Server', width: 250 },
+      { field: 'Location', headerName: 'Location', width: 120 },
+      { field: 'Sku', headerName: 'SKU', width: 100 },
+      { field: 'ResourceGroupName', headerName: 'Resource Group', width: 180 },
+      { field: 'AdminUserEnabled', headerName: 'Admin Enabled', width: 120 },
+      { field: 'PublicNetworkAccess', headerName: 'Public Access', width: 120 },
+      { field: 'ProvisioningState', headerName: 'State', width: 100 },
     ];
   }, []);
 

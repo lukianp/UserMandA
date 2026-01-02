@@ -354,12 +354,12 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
     console.log('Exporting to Excel:', filename, data.length, 'items');
   }, []);
 
-  // Computed properties
+  // Computed properties - using AG Grid ColDef format (field/headerName)
   const columns = [
-    { key: 'name', header: 'Service Name', width: 200 },
-    { key: 'provider', header: 'Provider', width: 120 },
-    { key: 'detected', header: 'Detected', width: 100 },
-    { key: 'capabilities', header: 'Capabilities', width: 150 },
+    { field: 'name', headerName: 'Service Name', width: 200 },
+    { field: 'provider', headerName: 'Provider', width: 120 },
+    { field: 'detected', headerName: 'Detected', width: 100 },
+    { field: 'capabilities', headerName: 'Capabilities', width: 150 },
   ];
 
   const filteredData = state.result?.detectedServices?.filter((service: any) => {

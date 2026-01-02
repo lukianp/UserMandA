@@ -79,8 +79,8 @@ interface ApplicationDependencyMappingDiscoveryHookResult extends BaseDiscoveryH
   stats: any;
   setActiveTab: (tab: string) => void;
   updateFilter: (updates: any) => void;
-  exportToCSV: (data?: any[], filename?: string) => void;
-  exportToExcel: (data?: any[], filename?: string) => Promise<void>;
+  exportToCSV: (data: any[], filename: string) => void;
+  exportToExcel: (data: any[], filename: string) => Promise<void>;
   selectedProfile: any;
   templates: any[];
   currentResult: ApplicationDependencyMappingDiscoveryResult | null;
@@ -443,12 +443,12 @@ export const useApplicationDependencyMappingDiscoveryLogic = (): ApplicationDepe
     addLog('info', `Exported to Excel: ${filename}`);
   }, [addLog]);
 
-  // Computed properties
+  // Computed properties - using AG Grid ColDef format (field/headerName)
   const columns = [
-    { key: 'name', header: 'Application Name', width: 200 },
-    { key: 'type', header: 'Type', width: 100 },
-    { key: 'dependencies', header: 'Dependencies', width: 150 },
-    { key: 'critical', header: 'Critical', width: 100 },
+    { field: 'name', headerName: 'Application Name', width: 200 },
+    { field: 'type', headerName: 'Type', width: 100 },
+    { field: 'dependencies', headerName: 'Dependencies', width: 150 },
+    { field: 'critical', headerName: 'Critical', width: 100 },
   ];
 
   const filteredData = state.result?.applications?.filter((app: any) => {

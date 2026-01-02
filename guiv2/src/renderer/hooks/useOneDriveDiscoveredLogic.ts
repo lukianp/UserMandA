@@ -153,13 +153,8 @@ interface OneDriveDiscoveredState {
   };
 }
 
-// Column definition for data grid
-export interface ColumnDef {
-  key: string;
-  header: string;
-  width: number;
-  getValue?: (row: any) => any;
-}
+// Using AG Grid ColDef - field and headerName are required for proper rendering
+import { ColDef } from 'ag-grid-community';
 
 // Helper function to load and parse CSV file
 async function loadCsvFile<T>(basePath: string, filename: string): Promise<T[]> {
@@ -450,6 +445,21 @@ export const useOneDriveDiscoveredLogic = () => {
   const enhancedStats = useMemo(() => {
     const stats = state.statistics;
 
+    // Discovery Success Calculation (weighted by importance)
+    const expectedSources = [
+      { name: 'Users', hasData: state.users.length > 0, weight: 25 },
+      { name: 'UsersWithoutOneDrive', hasData: state.usersWithoutOneDrive.length > 0, weight: 20 },
+      { name: 'Sites', hasData: state.sites.length > 0, weight: 15 },
+      { name: 'Items', hasData: state.items.length > 0, weight: 15 },
+      { name: 'SharingLinks', hasData: state.sharingLinks.length > 0, weight: 15 },
+      { name: 'Statistics', hasData: state.statistics !== null, weight: 10 },
+    ];
+    const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+    const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+    const discoverySuccessPercentage = Math.round((achievedWeight / totalWeight) * 100);
+    const dataSourcesReceivedCount = expectedSources.filter(s => s.hasData).length;
+    const dataSourcesTotal = expectedSources.length;
+
     // Status breakdown from users without OneDrive
     const statusBreakdown = {
       NoLicense: state.usersWithoutOneDrive.filter(u => u.Status === 'NoLicense').length,
@@ -489,6 +499,11 @@ export const useOneDriveDiscoveredLogic = () => {
       .slice(0, 10);
 
     return {
+      // Discovery Success metrics
+      discoverySuccessPercentage,
+      dataSourcesReceivedCount,
+      dataSourcesTotal,
+      // User metrics
       totalUsers: stats?.TotalUsers || (state.users.length + state.usersWithoutOneDrive.length),
       usersWithOneDrive: stats?.UsersWithOneDrive || state.users.length,
       usersWithoutOneDrive: stats?.UsersWithoutOneDrive || state.usersWithoutOneDrive.length,
@@ -515,56 +530,56 @@ export const useOneDriveDiscoveredLogic = () => {
     };
   }, [state.statistics, state.users, state.usersWithoutOneDrive, state.items, state.sharingLinks]);
 
-  // Column definitions for data grids
-  const userColumns: ColumnDef[] = [
-    { key: 'DisplayName', header: 'Display Name', width: 180 },
-    { key: 'UserPrincipalName', header: 'Email', width: 220 },
-    { key: 'Department', header: 'Department', width: 120 },
-    { key: 'UsedSize', header: 'Storage Used', width: 100, getValue: (row) => formatBytes(row.UsedSize) },
-    { key: 'UsagePercentage', header: 'Usage %', width: 80, getValue: (row) => `${row.UsagePercentage?.toFixed(1) || 0}%` },
-    { key: 'StorageStatus', header: 'Status', width: 90 },
-    { key: 'DaysSinceLastAccess', header: 'Days Inactive', width: 100 },
-    { key: 'WebUrl', header: 'URL', width: 200 },
+  // Column definitions for data grids - using AG Grid ColDef format
+  const userColumns: ColDef[] = [
+    { field: 'DisplayName', headerName: 'Display Name', width: 180 },
+    { field: 'UserPrincipalName', headerName: 'Email', width: 220 },
+    { field: 'Department', headerName: 'Department', width: 120 },
+    { field: 'UsedSize', headerName: 'Storage Used', width: 100, valueGetter: (params) => formatBytes(params.data?.UsedSize) },
+    { field: 'UsagePercentage', headerName: 'Usage %', width: 80, valueGetter: (params) => `${params.data?.UsagePercentage?.toFixed(1) || 0}%` },
+    { field: 'StorageStatus', headerName: 'Status', width: 90 },
+    { field: 'DaysSinceLastAccess', headerName: 'Days Inactive', width: 100 },
+    { field: 'WebUrl', headerName: 'URL', width: 200 },
   ];
 
-  const usersWithoutOneDriveColumns: ColumnDef[] = [
-    { key: 'DisplayName', header: 'Display Name', width: 180 },
-    { key: 'UserPrincipalName', header: 'Email', width: 220 },
-    { key: 'Department', header: 'Department', width: 120 },
-    { key: 'Status', header: 'Status', width: 100 },
-    { key: 'Reason', header: 'Reason', width: 280 },
-    { key: 'HasOneDriveLicense', header: 'Has License', width: 90, getValue: (row) => row.HasOneDriveLicense ? 'Yes' : 'No' },
-    { key: 'LicenseCount', header: 'Licenses', width: 70 },
-    { key: 'AccountEnabled', header: 'Enabled', width: 70, getValue: (row) => row.AccountEnabled ? 'Yes' : 'No' },
+  const usersWithoutOneDriveColumns: ColDef[] = [
+    { field: 'DisplayName', headerName: 'Display Name', width: 180 },
+    { field: 'UserPrincipalName', headerName: 'Email', width: 220 },
+    { field: 'Department', headerName: 'Department', width: 120 },
+    { field: 'Status', headerName: 'Status', width: 100 },
+    { field: 'Reason', headerName: 'Reason', width: 280 },
+    { field: 'HasOneDriveLicense', headerName: 'Has License', width: 90, valueGetter: (params) => params.data?.HasOneDriveLicense ? 'Yes' : 'No' },
+    { field: 'LicenseCount', headerName: 'Licenses', width: 70 },
+    { field: 'AccountEnabled', headerName: 'Enabled', width: 70, valueGetter: (params) => params.data?.AccountEnabled ? 'Yes' : 'No' },
   ];
 
-  const siteColumns: ColumnDef[] = [
-    { key: 'SiteName', header: 'Site Name', width: 180 },
-    { key: 'UserPrincipalName', header: 'Owner', width: 220 },
-    { key: 'SiteUrl', header: 'URL', width: 300 },
-    { key: 'CreatedDateTime', header: 'Created', width: 140 },
-    { key: 'LastModifiedDateTime', header: 'Last Modified', width: 140 },
+  const siteColumns: ColDef[] = [
+    { field: 'SiteName', headerName: 'Site Name', width: 180 },
+    { field: 'UserPrincipalName', headerName: 'Owner', width: 220 },
+    { field: 'SiteUrl', headerName: 'URL', width: 300 },
+    { field: 'CreatedDateTime', headerName: 'Created', width: 140 },
+    { field: 'LastModifiedDateTime', headerName: 'Last Modified', width: 140 },
   ];
 
-  const itemColumns: ColumnDef[] = [
-    { key: 'ItemName', header: 'Name', width: 220 },
-    { key: 'ItemType', header: 'Type', width: 70 },
-    { key: 'FileCategory', header: 'Category', width: 90 },
-    { key: 'Size', header: 'Size', width: 90, getValue: (row) => formatBytes(row.Size) },
-    { key: 'UserPrincipalName', header: 'Owner', width: 180 },
-    { key: 'ParentPath', header: 'Path', width: 200 },
-    { key: 'LastModifiedDateTime', header: 'Last Modified', width: 140 },
+  const itemColumns: ColDef[] = [
+    { field: 'ItemName', headerName: 'Name', width: 220 },
+    { field: 'ItemType', headerName: 'Type', width: 70 },
+    { field: 'FileCategory', headerName: 'Category', width: 90 },
+    { field: 'Size', headerName: 'Size', width: 90, valueGetter: (params) => formatBytes(params.data?.Size) },
+    { field: 'UserPrincipalName', headerName: 'Owner', width: 180 },
+    { field: 'ParentPath', headerName: 'Path', width: 200 },
+    { field: 'LastModifiedDateTime', headerName: 'Last Modified', width: 140 },
   ];
 
-  const sharingColumns: ColumnDef[] = [
-    { key: 'ItemName', header: 'Item', width: 180 },
-    { key: 'ShareClassification', header: 'Share Type', width: 110 },
-    { key: 'RiskLevel', header: 'Risk', width: 70 },
-    { key: 'SharedWithEmail', header: 'Shared With', width: 180 },
-    { key: 'UserPrincipalName', header: 'Owner', width: 180 },
-    { key: 'PermissionType', header: 'Permission', width: 100 },
-    { key: 'IsExternalShare', header: 'External', width: 70, getValue: (row) => row.IsExternalShare ? 'Yes' : 'No' },
-    { key: 'HasExpiration', header: 'Expires', width: 70, getValue: (row) => row.HasExpiration ? 'Yes' : 'No' },
+  const sharingColumns: ColDef[] = [
+    { field: 'ItemName', headerName: 'Item', width: 180 },
+    { field: 'ShareClassification', headerName: 'Share Type', width: 110 },
+    { field: 'RiskLevel', headerName: 'Risk', width: 70 },
+    { field: 'SharedWithEmail', headerName: 'Shared With', width: 180 },
+    { field: 'UserPrincipalName', headerName: 'Owner', width: 180 },
+    { field: 'PermissionType', headerName: 'Permission', width: 100 },
+    { field: 'IsExternalShare', headerName: 'External', width: 70, valueGetter: (params) => params.data?.IsExternalShare ? 'Yes' : 'No' },
+    { field: 'HasExpiration', headerName: 'Expires', width: 70, valueGetter: (params) => params.data?.HasExpiration ? 'Yes' : 'No' },
   ];
 
   // Export functions

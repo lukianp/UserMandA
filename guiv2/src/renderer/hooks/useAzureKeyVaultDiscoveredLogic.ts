@@ -52,12 +52,8 @@ interface AzureKeyVaultStats {
   topLocations: { name: string; count: number }[];
 }
 
-interface ColumnDef {
-  key: string;
-  header: string;
-  width: number;
-  getValue?: (row: any) => any;
-}
+// Using AG Grid ColDef - field and headerName are required for proper rendering
+import { ColDef } from 'ag-grid-community';
 
 async function loadCsvFile<T>(basePath: string, filename: string): Promise<T[]> {
   const fullPath = `${basePath}\\Raw\\${filename}`;
@@ -174,18 +170,18 @@ export const useAzureKeyVaultDiscoveredLogic = () => {
     );
   }, [searchText, vaults]);
 
-  const columns = useMemo<ColumnDef[]>(() => {
+  const columns = useMemo<ColDef[]>(() => {
     return [
-      { key: 'VaultName', header: 'Vault Name', width: 200 },
-      { key: 'Location', header: 'Location', width: 120 },
-      { key: 'Sku', header: 'SKU', width: 100 },
-      { key: 'ResourceGroupName', header: 'Resource Group', width: 180 },
-      { key: 'SecretCount', header: 'Secrets', width: 80 },
-      { key: 'KeyCount', header: 'Keys', width: 80 },
-      { key: 'CertificateCount', header: 'Certs', width: 80 },
-      { key: 'AccessPolicyCount', header: 'Policies', width: 80 },
-      { key: 'EnableSoftDelete', header: 'Soft Delete', width: 100 },
-      { key: 'EnableRbacAuthorization', header: 'RBAC', width: 80 },
+      { field: 'VaultName', headerName: 'Vault Name', width: 200 },
+      { field: 'Location', headerName: 'Location', width: 120 },
+      { field: 'Sku', headerName: 'SKU', width: 100 },
+      { field: 'ResourceGroupName', headerName: 'Resource Group', width: 180 },
+      { field: 'SecretCount', headerName: 'Secrets', width: 80 },
+      { field: 'KeyCount', headerName: 'Keys', width: 80 },
+      { field: 'CertificateCount', headerName: 'Certs', width: 80 },
+      { field: 'AccessPolicyCount', headerName: 'Policies', width: 80 },
+      { field: 'EnableSoftDelete', headerName: 'Soft Delete', width: 100 },
+      { field: 'EnableRbacAuthorization', headerName: 'RBAC', width: 80 },
     ];
   }, []);
 
