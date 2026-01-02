@@ -31,6 +31,7 @@ import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
 
 const AzureResourceDiscoveryView: React.FC = () => {
   const { selectedSourceProfile } = useProfileStore();
@@ -77,7 +78,7 @@ const AzureResourceDiscoveryView: React.FC = () => {
   const exportPayload = Array.isArray(filteredData) ? filteredData : [];
 
   // Resource type filters
-  const resourceTypes = ['VirtualMachine', 'StorageAccount', 'KeyVault', 'Network', 'WebApp', 'Database'];
+  const resourceTypes = ['VirtualMachine', 'VMScaleSet', 'StorageAccount', 'KeyVault', 'Network', 'WebApp', 'Database'];
 
   const toggleResourceType = (type: string) => {
     const current = normalizedFilter.selectedResourceTypes;
@@ -92,8 +93,32 @@ const AzureResourceDiscoveryView: React.FC = () => {
   const keyVaultCount = Number(stats?.keyVaults) || 0;
   const networkCount = Number(stats?.networkResources) || 0;
   const webAppCount = Number(stats?.webApps) || 0;
+  const vmssCount = Number(stats?.vmScaleSets) || 0;
   const subscriptionCount = Array.isArray(stats?.subscriptions) ? stats.subscriptions.length : 1;
   const resourceGroupCount = Number(stats?.resourceGroups) || 0;
+
+  // Calculate discovery success percentage (weighted by importance)
+  const discoverySuccess = (() => {
+    if (!stats) return { percentage: 0, received: 0, total: 8 };
+    const expectedSources = [
+      { name: 'Subscriptions', hasData: subscriptionCount > 0, weight: 20 },
+      { name: 'Resource Groups', hasData: resourceGroupCount > 0, weight: 15 },
+      { name: 'Virtual Machines', hasData: vmCount > 0, weight: 15 },
+      { name: 'VM Scale Sets', hasData: vmssCount > 0, weight: 10 },
+      { name: 'Storage Accounts', hasData: storageCount > 0, weight: 15 },
+      { name: 'Key Vaults', hasData: keyVaultCount > 0, weight: 12 },
+      { name: 'Network Resources', hasData: networkCount > 0, weight: 13 },
+      { name: 'Web Apps', hasData: webAppCount > 0, weight: 10 },
+    ];
+    const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+    const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+    const received = expectedSources.filter(s => s.hasData).length;
+    return {
+      percentage: Math.round((achievedWeight / totalWeight) * 100),
+      received,
+      total: expectedSources.length,
+    };
+  })();
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="azure-resource-discovery-view" data-testid="azure-resource-discovery-view">
@@ -210,6 +235,14 @@ const AzureResourceDiscoveryView: React.FC = () => {
       {/* Statistics Cards */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 p-6">
+          {/* Discovery Success Card - FIRST */}
+          <DiscoverySuccessCard
+            percentage={discoverySuccess.percentage}
+            received={discoverySuccess.received}
+            total={discoverySuccess.total}
+            showAnimation={true}
+          />
+
           <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
               <Cloud className="w-8 h-8 opacity-80" />
@@ -276,16 +309,6 @@ const AzureResourceDiscoveryView: React.FC = () => {
               <div className="text-right">
                 <div className="text-3xl font-bold">{networkCount}</div>
                 <div className="text-sm opacity-90">Network Resources</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg shadow text-white">
-            <div className="flex items-center justify-between">
-              <Globe className="w-8 h-8 opacity-80" />
-              <div className="text-right">
-                <div className="text-3xl font-bold">{webAppCount}</div>
-                <div className="text-sm opacity-90">Web Apps</div>
               </div>
             </div>
           </div>

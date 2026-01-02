@@ -44,6 +44,7 @@ import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
 
 const EntraIDM365DiscoveryView: React.FC = () => {
   const {
@@ -339,6 +340,14 @@ const EntraIDM365DiscoveryView: React.FC = () => {
       {/* Rich Statistics Cards - Show when we have discovered data */}
       {discoveredStats && (
         <div className="grid grid-cols-4 gap-4 p-6">
+          {/* Discovery Success Card - FIRST */}
+          <DiscoverySuccessCard
+            percentage={discoveredStats.discoverySuccessPercentage}
+            received={discoveredStats.dataSourcesReceivedCount}
+            total={discoveredStats.dataSourcesTotal}
+            showAnimation={true}
+          />
+
           {/* Row 1: User Metrics */}
           <div className="p-4 bg-gradient-to-br from-sky-500 to-sky-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
