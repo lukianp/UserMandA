@@ -116,6 +116,9 @@ export interface SankeyNode extends SankeyNodeMinimal<SankeyNode, SankeyLink> {
     record: any;
     priority: number; // For LeanIX layer ordering (1=Infrastructure, 4=Business Capabilities)
     category?: string; // LeanIX-style entity category
+    // Classification fields (for SP/App promotion/demotion logic)
+    originalType?: EntityType; // Type before classification override
+    classificationReason?: 'microsoft-first-party' | 'no-enterprise-usage' | 'enterprise-app-promoted' | 'default-mapping';
   };
   // Canonical identifiers for cross-file matching (NEW)
   identifiers?: CanonicalIdentifiers;

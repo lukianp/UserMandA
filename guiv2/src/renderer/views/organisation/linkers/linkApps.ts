@@ -218,6 +218,41 @@ export function run(ctx: LinkContext): SankeyLink[] {
     }
   }
 
+  // 6. IT Component → Application via RequiredResourceAppIds (API dependencies)
+  // When an Application requires an API (e.g., Microsoft Graph), link the IT Component
+  // (Service Principal) that provides that API to the Application that consumes it
+  const spByAppId = new Map<string, SankeyNode>();
+  for (const sp of servicePrincipals) {
+    const record = sp.metadata.record;
+    const appId = record.AppId?.toLowerCase();
+    if (appId) {
+      spByAppId.set(appId, sp);
+    }
+  }
+
+  for (const app of applications) {
+    const record = app.metadata.record;
+    const requiredApiAppIds = record.RequiredResourceAppIds;
+
+    if (requiredApiAppIds && requiredApiAppIds.trim() !== '') {
+      const apiAppIds = requiredApiAppIds.split(';').filter((id: string) => id.trim() !== '');
+
+      for (const apiAppId of apiAppIds) {
+        const normalizedApiAppId = apiAppId.toLowerCase().trim();
+        const spNode = spByAppId.get(normalizedApiAppId);
+
+        if (spNode && spNode.id !== app.id) {
+          addLink(links, spNode.id, app.id, 'provides', 85, 'HIGH', [{
+            file: app.metadata.source,
+            fields: ['RequiredResourceAppIds'],
+            sourceValue: spNode.name,
+            targetValue: app.name
+          }]);
+        }
+      }
+    }
+  }
+
   console.log(`[linkApps] Generated ${links.length} application links`);
   return links;
 }

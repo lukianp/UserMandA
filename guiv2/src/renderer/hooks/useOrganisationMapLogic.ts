@@ -44,7 +44,7 @@ const BATCH_SIZE = 100; // Process nodes in batches to avoid blocking
 const MAX_LINKS_PER_NODE = 20; // Limit links per node to prevent performance issues
 const MAX_NODES = 5000; // Maximum nodes to render (prevent browser crash with 9000+ objects)
 const MAX_LINKS = 10000; // Maximum links to render
-const CACHE_VERSION = 'v2'; // Bump to invalidate cache
+const CACHE_VERSION = 'v4-appcatalog'; // Bump to invalidate cache
 
 /**
  * Case-insensitive property getter for CSV records
@@ -1424,14 +1424,23 @@ export const useOrganisationMapLogic = (): UseOrganisationMapLogicReturn => {
         console.log('[useOrganisationMapLogic] Processing file:', file.path, 'Key:', fileTypeKey);
 
         try {
-          // Check cache first
-          const cacheKey = `${file.path}_${file.modifiedDate || ''}`;
+          // Check cache first (include CACHE_VERSION to invalidate on logic changes)
+          const cacheKey = `${CACHE_VERSION}_${file.path}_${file.modifiedDate || ''}`;
           let fileNodes = cacheRef.current.get(cacheKey);
 
           if (!fileNodes) {
             const content = await window.electronAPI.invoke('read-discovery-file', file.path);
             fileNodes = parseCSVToNodes(content, fileTypeKey, file.path);
             cacheRef.current.set(cacheKey, fileNodes);
+
+            // Debug logging for service principal files
+            if (fileTypeKey.includes('serviceprincipal')) {
+              const typeBreakdown = fileNodes.reduce((acc, n) => {
+                acc[n.type] = (acc[n.type] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>);
+              console.log('[SP Classification]', fileTypeKey, 'Types:', typeBreakdown);
+            }
           }
 
           const fileLinks = generateLinksForFile(fileNodes, fileTypeKey, allNodes);
@@ -1708,6 +1717,29 @@ export const useOrganisationMapLogic = (): UseOrganisationMapLogicReturn => {
         return acc;
       }, {} as Record<EntityType, number>);
 
+      // Classification report for debugging
+      const classificationStats = {
+        microsoftFirstParty: finalData.nodes.filter(n =>
+          n.metadata?.classificationReason === 'microsoft-first-party'
+        ).length,
+        noEnterpriseUsage: finalData.nodes.filter(n =>
+          n.metadata?.classificationReason === 'no-enterprise-usage'
+        ).length,
+        enterpriseAppsPromoted: finalData.nodes.filter(n =>
+          n.metadata?.classificationReason === 'enterprise-app-promoted'
+        ).length,
+        defaultMapping: finalData.nodes.filter(n =>
+          !n.metadata?.classificationReason || n.metadata?.classificationReason === 'default-mapping'
+        ).length
+      };
+
+      console.log('[Classification Report]', {
+        applications: nodesByType['application'] || 0,
+        itComponents: nodesByType['it-component'] || 0,
+        ...classificationStats,
+        summary: `${classificationStats.microsoftFirstParty} Microsoft first-party + ${classificationStats.noEnterpriseUsage} no-usage demoted to IT Components`
+      });
+
       setStats({
         totalNodes: finalData.nodes.length,
         totalLinks: finalData.links.length,
@@ -1812,6 +1844,7 @@ function parseCSVToNodes(csvContent: string, fileTypeKey: string, filePath: stri
 function findBestMapping(fileTypeKey: string, filePath: string): typeof typeMapping[string] | null {
   // Direct match
   if (typeMapping[fileTypeKey]) {
+    console.log('[findBestMapping] Direct match:', fileTypeKey, '→', typeMapping[fileTypeKey].type);
     return typeMapping[fileTypeKey];
   }
 
@@ -1821,34 +1854,42 @@ function findBestMapping(fileTypeKey: string, filePath: string): typeof typeMapp
   for (const [key, mapping] of Object.entries(typeMapping)) {
     const normalizedMappingKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (normalizedKey.includes(normalizedMappingKey) || normalizedMappingKey.includes(normalizedKey)) {
+      console.log('[findBestMapping] Partial match:', fileTypeKey, '→', key, '→', mapping.type);
       return mapping;
     }
   }
 
   // Fallback based on common patterns in filename
   const lowerPath = filePath.toLowerCase();
+  let fallbackKey: string | null = null;
 
   if (lowerPath.includes('user')) {
-    return typeMapping['users'];
+    fallbackKey = 'users';
   } else if (lowerPath.includes('group')) {
-    return typeMapping['groups'];
+    fallbackKey = 'groups';
   } else if (lowerPath.includes('application') || lowerPath.includes('app')) {
-    return typeMapping['applications'];
+    fallbackKey = 'applications';
   } else if (lowerPath.includes('server') || lowerPath.includes('infrastructure')) {
-    return typeMapping['infrastructure'];
+    fallbackKey = 'infrastructure';
   } else if (lowerPath.includes('security')) {
-    return typeMapping['securityinfrastructurediscovery'];
+    fallbackKey = 'securityinfrastructurediscovery';
   } else if (lowerPath.includes('network')) {
-    return typeMapping['networkinfrastructure_networkadapter'];
+    fallbackKey = 'networkinfrastructure_networkadapter';
   } else if (lowerPath.includes('storage')) {
-    return typeMapping['storage_localstorage'];
+    fallbackKey = 'storage_localstorage';
   } else if (lowerPath.includes('certificate')) {
-    return typeMapping['ca_certificates'];
+    fallbackKey = 'ca_certificates';
   } else if (lowerPath.includes('policy') || lowerPath.includes('gpo')) {
-    return typeMapping['grouppolicies'];
+    fallbackKey = 'grouppolicies';
+  }
+
+  if (fallbackKey && typeMapping[fallbackKey]) {
+    console.log('[findBestMapping] Fallback path match:', fileTypeKey, '→', fallbackKey, '→', typeMapping[fallbackKey].type);
+    return typeMapping[fallbackKey];
   }
 
   // Default fallback - treat as IT component
+  console.log('[findBestMapping] Default fallback:', fileTypeKey, '→ it-component');
   return {
     type: 'it-component',
     getName: (r) => r.Name || r.DisplayName || r.ComputerName || r.Id,
@@ -1857,8 +1898,174 @@ function findBestMapping(fileTypeKey: string, filePath: string): typeof typeMapp
   };
 }
 
+// ========================================================================
+// SERVICE PRINCIPAL CLASSIFICATION
+// Intelligent classification to prevent Microsoft apps from polluting
+// the "Applications" bucket - they belong in "IT Components"
+// ========================================================================
+
+/**
+ * Known Microsoft organization IDs
+ */
+const MICROSOFT_ORG_IDS = [
+  'f8cdef31-a31e-4b4a-93e4-5f571e91255a', // Microsoft Corp
+  '72f988bf-86f1-41af-91ab-2d7cd011db47', // Microsoft Services
+];
+
+/**
+ * Patterns for Microsoft built-in apps
+ */
+const MICROSOFT_APP_PATTERNS = [
+  /^microsoft/i,
+  /^windows/i,
+  /^office\s*365/i,
+  /^o365/i,
+  /^azure/i,
+  /^exchange\s*online/i,
+  /^sharepoint\s*online/i,
+  /^teams/i,
+  /^onedrive/i,
+  /^power\s*(apps|automate|bi|platform)/i,
+  /^dynamics/i,
+  /^graph\s*explorer/i,
+  /^intune/i,
+  /^defender/i,
+  /^security\s*center/i,
+  /^compliance/i,
+  /^purview/i,
+  /^entra/i,
+];
+
+/**
+ * Check if a record represents a Microsoft first-party application
+ */
+function isMicrosoftFirstParty(record: any): boolean {
+  // Check publisher domain
+  const publisherDomain = (
+    getRecordProp(record, 'PublisherDomain') ||
+    getRecordProp(record, 'VerifiedPublisher') ||
+    ''
+  ).toLowerCase();
+
+  if (publisherDomain && (
+    publisherDomain.includes('microsoft') ||
+    publisherDomain.includes('windows') ||
+    publisherDomain.includes('office') ||
+    publisherDomain === 'microsoft.com'
+  )) return true;
+
+  // Check publisher name (including Vendor from ApplicationCatalog)
+  const publisherName = (
+    getRecordProp(record, 'PublisherName') ||
+    getRecordProp(record, 'Publisher') ||
+    getRecordProp(record, 'Vendor') ||
+    ''
+  ).toLowerCase();
+
+  if (publisherName && publisherName !== 'unknown' && (
+    publisherName.includes('microsoft') ||
+    publisherName === 'microsoft corporation' ||
+    publisherName === 'microsoft corp'
+  )) return true;
+
+  // Check app owner organization ID
+  const ownerOrgId = getRecordProp(record, 'AppOwnerOrganizationId') ||
+                     getRecordProp(record, 'AppOwnerTenantId');
+  if (ownerOrgId && MICROSOFT_ORG_IDS.includes(ownerOrgId.toLowerCase())) return true;
+
+  // Check display name against Microsoft patterns (including Name from ApplicationCatalog)
+  const displayName = getRecordProp(record, 'DisplayName') || getRecordProp(record, 'Name') || '';
+  if (displayName && MICROSOFT_APP_PATTERNS.some(pattern => pattern.test(displayName))) {
+    return true;
+  }
+
+  // Check app ID against known Microsoft app IDs (common ones)
+  const appId = (getRecordProp(record, 'AppId') || '').toLowerCase();
+  const knownMicrosoftAppIds = [
+    '00000003-0000-0000-c000-000000000000', // Microsoft Graph
+    '00000002-0000-0000-c000-000000000000', // Azure AD Graph (legacy)
+    '00000001-0000-0000-c000-000000000000', // Azure AD
+    '00000002-0000-0ff1-ce00-000000000000', // Office 365 Exchange Online
+    '00000003-0000-0ff1-ce00-000000000000', // Office 365 SharePoint Online
+    '00000004-0000-0ff1-ce00-000000000000', // Skype for Business Online
+    '00000006-0000-0ff1-ce00-000000000000', // Microsoft Rights Management Services
+    '00000007-0000-0ff1-ce00-000000000000', // Office 365 Information Protection
+    '797f4846-ba00-4fd7-ba43-dac1f8f63013', // Windows Azure Service Management API
+    'fc780465-2017-40d4-a0c5-307022471b92', // Azure Active Directory PowerShell
+  ];
+  if (appId && knownMicrosoftAppIds.includes(appId)) return true;
+
+  return false;
+}
+
+/**
+ * Determine if an app/service principal should be promoted to "application" type
+ * Returns true only for genuine enterprise/custom applications
+ */
+function shouldPromoteToApplication(record: any, isServicePrincipal: boolean): boolean {
+  // Must NOT be Microsoft first-party
+  if (isMicrosoftFirstParty(record)) return false;
+
+  // For service principals, check the type
+  if (isServicePrincipal) {
+    const spType = getRecordProp(record, 'ServicePrincipalType');
+    // Only 'Application' type SPs can be promoted, not 'ManagedIdentity' or 'Legacy'
+    if (spType && spType !== 'Application') return false;
+  }
+
+  // Check for evidence of real enterprise usage
+  // Support multiple field names from different CSV sources
+  const assignedUsers = getRecordProp(record, 'AssignedUsers') ||
+                        getRecordProp(record, 'UsersAssigned') ||
+                        getRecordProp(record, 'AssignedToUsers');
+  const oauthGrants = getRecordProp(record, 'OauthGrants') ||
+                      getRecordProp(record, 'Grants') ||
+                      getRecordProp(record, 'OAuth2PermissionGrants') ||
+                      getRecordProp(record, 'OAuth2PermissionGrantsCount'); // ApplicationCatalog
+  const ownerCount = getRecordProp(record, 'OwnerCount') ||
+                     getRecordProp(record, 'Owners');
+  const signInCount = getRecordProp(record, 'SignInCount') ||
+                      getRecordProp(record, 'SignIns');
+  const appRoleAssignments = getRecordProp(record, 'AppRoleAssignmentsCount'); // ApplicationCatalog
+  const lastSignIn = getRecordProp(record, 'LastSignInDateTime'); // ApplicationCatalog
+
+  const hasAssignments = assignedUsers && (
+    typeof assignedUsers === 'number' ? assignedUsers > 0 :
+    Array.isArray(assignedUsers) ? assignedUsers.length > 0 :
+    parseInt(assignedUsers, 10) > 0
+  );
+
+  const hasGrants = oauthGrants && (
+    typeof oauthGrants === 'number' ? oauthGrants > 0 :
+    Array.isArray(oauthGrants) ? oauthGrants.length > 0 :
+    oauthGrants.toString().length > 2
+  );
+
+  const hasOwners = ownerCount && (
+    typeof ownerCount === 'number' ? ownerCount > 0 :
+    Array.isArray(ownerCount) ? ownerCount.length > 0 :
+    parseInt(ownerCount, 10) > 0
+  );
+
+  const hasSignIns = signInCount && (
+    typeof signInCount === 'number' ? signInCount > 0 :
+    parseInt(signInCount, 10) > 0
+  );
+
+  const hasAppRoleAssignments = appRoleAssignments && (
+    typeof appRoleAssignments === 'number' ? appRoleAssignments > 0 :
+    parseInt(appRoleAssignments, 10) > 0
+  );
+
+  const hasRecentSignIn = lastSignIn && lastSignIn.trim() !== '' && lastSignIn !== 'null';
+
+  // Require at least one strong signal of enterprise usage
+  return hasAssignments || hasGrants || hasOwners || hasSignIns || hasAppRoleAssignments || hasRecentSignIn;
+}
+
 /**
  * Create SankeyNode from CSV record with enhanced metadata
+ * Includes intelligent classification for service principals
  */
 function createNodeFromRecord(
   record: Record<string, string>,
@@ -1872,32 +2079,65 @@ function createNodeFromRecord(
   }
 
   const cleanName = name.trim();
-  const nodeType = mapping.type;
+  let finalType = mapping.type;
+  let classificationReason: 'microsoft-first-party' | 'no-enterprise-usage' | 'enterprise-app-promoted' | 'default-mapping' = 'default-mapping';
 
-  // Create stable ID based on type, name, and source
-  const uniqueId = `${nodeType}-${cleanName.replace(/[^a-zA-Z0-9]/g, '_')}-${fileTypeKey}`;
+  // Apply classification overrides for service principals, app registrations, and app catalogs
+  const isClassifiableFile = (
+    fileTypeKey === 'entraidappregistrations' ||
+    fileTypeKey === 'entraidenterpriseapps' ||
+    fileTypeKey === 'azurediscovery_serviceprincipals' ||
+    fileTypeKey === 'azurediscovery_applications' ||
+    fileTypeKey === 'applicationcatalog' || // Added: consolidated app catalog
+    fileTypeKey.includes('serviceprincipal') ||
+    fileTypeKey.includes('appregistration') ||
+    fileTypeKey.includes('enterpriseapp') ||
+    fileTypeKey.includes('applicationcatalog')
+  );
+
+  if (isClassifiableFile && mapping.type === 'application') {
+    const isSP = fileTypeKey.includes('serviceprincipal');
+    const shouldPromote = shouldPromoteToApplication(record, isSP);
+
+    if (!shouldPromote) {
+      // Demote to it-component (Microsoft or no usage evidence)
+      finalType = 'it-component';
+      classificationReason = isMicrosoftFirstParty(record)
+        ? 'microsoft-first-party'
+        : 'no-enterprise-usage';
+    } else {
+      classificationReason = 'enterprise-app-promoted';
+    }
+  }
+
+  // Create stable ID based on final type, name, and source
+  const uniqueId = `${finalType}-${cleanName.replace(/[^a-zA-Z0-9]/g, '_')}-${fileTypeKey}`;
 
   return {
     id: uniqueId,
     name: cleanName,
-    type: nodeType,
-    factSheet: createFactSheet(record, nodeType, mapping.category),
+    type: finalType,
+    factSheet: createFactSheet(record, finalType, mapping.category, classificationReason),
     metadata: {
       source: fileTypeKey,
       record,
       priority: mapping.priority,
-      category: mapping.category
+      category: mapping.category,
+      originalType: mapping.type,
+      classificationReason
     }
   };
 }
 
 /**
  * Create FactSheet from CSV record with enhanced metadata extraction
+ * Includes classification metadata for service principal tracking
  */
 function createFactSheet(
   record: Record<string, string>,
   type: EntityType,
-  category: string
+  category: string,
+  classificationReason: string = 'default-mapping'
 ): FactSheetData {
   // Extract owner from various possible fields
   const owner = record.Owner ||
@@ -1931,6 +2171,23 @@ function createFactSheet(
   }
   if (category) {
     tags.push(category);
+  }
+
+  // Add classification metadata as tags
+  if (classificationReason !== 'default-mapping') {
+    tags.push(`classification:${classificationReason}`);
+  }
+
+  // Add service principal type info
+  const spType = record.ServicePrincipalType || record.servicePrincipalType;
+  if (spType) {
+    tags.push(`sp-type:${spType.toLowerCase()}`);
+  }
+
+  // Add publisher info
+  const publisher = record.PublisherDomain || record.PublisherName || record.Publisher;
+  if (publisher) {
+    tags.push(`publisher:${publisher.toLowerCase().replace(/[^a-z0-9.-]/g, '')}`);
   }
 
   return {
