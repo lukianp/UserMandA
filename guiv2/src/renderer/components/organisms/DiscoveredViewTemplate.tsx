@@ -10,13 +10,89 @@
 
 import React, { useMemo, useCallback } from 'react';
 import { ColDef } from 'ag-grid-community';
-import { Download, RefreshCw, Search, AlertCircle, Info } from 'lucide-react';
+import { Download, RefreshCw, Search, AlertCircle, Info, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
 
 import { VirtualizedDataGrid } from './VirtualizedDataGrid';
 import { BaseDiscoveryData } from '../../types/discoveryData';
 import { Button } from '../atoms/Button';
 import { Spinner } from '../atoms/Spinner';
+
+/**
+ * Simple Discovery Status Card - shows whether data was loaded successfully
+ * This is a simplified version for wrapper-based views
+ */
+const DiscoveryStatusCard: React.FC<{
+  hasData: boolean;
+  recordCount: number;
+  loading: boolean;
+  error: Error | null;
+}> = ({ hasData, recordCount, loading, error }) => {
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl p-4 text-white shadow-lg animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <RefreshCw size={20} className="animate-spin" />
+          </div>
+          <div>
+            <p className="text-xs opacity-80">Discovery Status</p>
+            <p className="text-lg font-bold">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gradient-to-br from-red-500 to-rose-600 rounded-xl p-4 text-white shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <XCircle size={20} />
+          </div>
+          <div>
+            <p className="text-xs opacity-80">Discovery Status</p>
+            <p className="text-lg font-bold">Error</p>
+            <p className="text-xs opacity-80">Run discovery to load data</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <div className="bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl p-4 text-white shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <AlertTriangle size={20} />
+          </div>
+          <div>
+            <p className="text-xs opacity-80">Discovery Status</p>
+            <p className="text-lg font-bold">No Data</p>
+            <p className="text-xs opacity-80">Run discovery first</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white shadow-lg">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-white/20 rounded-lg">
+          <CheckCircle2 size={20} />
+        </div>
+        <div>
+          <p className="text-xs opacity-80">Discovery Status</p>
+          <p className="text-lg font-bold">Data Loaded</p>
+          <p className="text-xs opacity-80">{recordCount.toLocaleString()} records</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export interface DiscoveredViewTemplateProps<T extends BaseDiscoveryData = BaseDiscoveryData> {
   /** Page title */
@@ -126,18 +202,27 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {title}
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {description}
-              </p>
-              {lastRefresh && (
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Last updated: {lastRefresh.toLocaleTimeString()} (auto-refresh: 30s)
+            <div className="flex items-center gap-6">
+              {/* Discovery Status Card */}
+              <DiscoveryStatusCard
+                hasData={data.length > 0}
+                recordCount={data.length}
+                loading={loading}
+                error={error}
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {title}
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {description}
                 </p>
-              )}
+                {lastRefresh && (
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    Last updated: {lastRefresh.toLocaleTimeString()} (auto-refresh: 30s)
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Action buttons */}

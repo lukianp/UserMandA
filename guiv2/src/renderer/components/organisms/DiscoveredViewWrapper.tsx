@@ -13,9 +13,10 @@
  * />
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { DiscoveredViewTemplate } from './DiscoveredViewTemplate';
 import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
+import { DiscoverySuccessCard } from '../molecules/DiscoverySuccessCard';
 
 export interface DiscoveredViewWrapperProps {
   /** Module name for loading CSV */
