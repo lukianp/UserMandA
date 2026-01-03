@@ -38,8 +38,8 @@ const AWSCloudInfrastructureDiscoveryView = () => {
     cancelDiscovery,
     exportToCSV,
     exportToExcel,
-    activeTab,
-    setActiveTab,
+    activeTab: hookActiveTab,
+    setActiveTab: setHookActiveTab,
     columns,
     filteredData,
     stats,
@@ -49,9 +49,19 @@ const AWSCloudInfrastructureDiscoveryView = () => {
     setShowExecutionDialog,
   } = useAWSDiscoveryLogic();
 
-  // Local UI state
+  // Local UI state - extended tab type to include 'logs'
+  type UITabType = 'overview' | 'ec2' | 's3' | 'rds' | 'logs';
+  const [activeTab, setActiveTab] = useState<UITabType>('overview');
   const [showConfig, setShowConfig] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Sync hook tab with UI tab for data tabs
+  const handleTabChange = (tab: UITabType) => {
+    setActiveTab(tab);
+    if (tab !== 'logs') {
+      setHookActiveTab(tab);
+    }
+  };
 
   /**
    * Validate configuration before starting discovery
@@ -109,7 +119,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="aws-cloud-infrastructure-discovery-view" data-testid="aws-cloud-infrastructure-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="aws-cloud-infrastructure-discovery-view" data-testid="aws-cloud-infrastructure-discovery-view">
       {/* Loading Overlay */}
       {isDiscovering && (
         <LoadingOverlay
@@ -397,7 +407,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
         <div className="flex items-center gap-1 px-4">
           <TabButton
             active={activeTab === 'overview'}
-            onClick={() => setActiveTab('overview')}
+            onClick={() => handleTabChange('overview')}
             label="Overview"
             icon={<Cloud className="w-4 h-4" />}
             data-cy="tab-overview" data-testid="tab-overview"
@@ -406,21 +416,21 @@ const AWSCloudInfrastructureDiscoveryView = () => {
             <>
               <TabButton
                 active={activeTab === 'ec2'}
-                onClick={() => setActiveTab('ec2')}
+                onClick={() => handleTabChange('ec2')}
                 label={`EC2 (${stats?.ec2Count || 0})`}
                 icon={<Server className="w-4 h-4" />}
                 data-cy="tab-ec2" data-testid="tab-ec2"
               />
               <TabButton
                 active={activeTab === 's3'}
-                onClick={() => setActiveTab('s3')}
+                onClick={() => handleTabChange('s3')}
                 label={`S3 (${stats?.s3Count || 0})`}
                 icon={<Database className="w-4 h-4" />}
                 data-cy="tab-s3" data-testid="tab-s3"
               />
               <TabButton
                 active={activeTab === 'rds'}
-                onClick={() => setActiveTab('rds')}
+                onClick={() => handleTabChange('rds')}
                 label={`RDS (${stats?.rdsCount || 0})`}
                 icon={<Database className="w-4 h-4" />}
                 data-cy="tab-rds" data-testid="tab-rds"
@@ -429,7 +439,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
           )}
           <TabButton
             active={activeTab === 'logs'}
-            onClick={() => setActiveTab('logs' as any)}
+            onClick={() => handleTabChange('logs')}
             label="Execution Log"
             icon={<FileText className="w-4 h-4" />}
             data-cy="tab-logs" data-testid="tab-logs"
@@ -454,10 +464,10 @@ const AWSCloudInfrastructureDiscoveryView = () => {
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-auto">
           {activeTab === 'logs' ? (
             /* Execution Log Tab */
-            <div className="h-full flex flex-col">
+            <div className="min-h-full flex flex-col">
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   {logs.length} log entries
@@ -479,13 +489,12 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                     <div
                       key={index}
                       className={`py-1 ${
-                        log.type === 'error' ? 'text-red-400' :
-                        log.type === 'warning' ? 'text-yellow-400' :
-                        log.type === 'success' ? 'text-green-400' :
+                        log.level === 'error' ? 'text-red-400' :
+                        log.level === 'warning' ? 'text-yellow-400' :
                         'text-gray-300'
                       }`}
                     >
-                      <span className="text-gray-500">[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
+                      <span className="text-gray-500">[{log.timestamp}]</span>{' '}
                       {log.message}
                     </div>
                   ))
@@ -494,7 +503,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
             </div>
           ) : result ? (
             activeTab === 'overview' ? (
-              <div className="h-full flex flex-col overflow-auto">
+              <div className="min-h-full flex flex-col overflow-auto">
                 <OverviewTab result={result} />
                 <div className="p-4">
                   <ViewDiscoveredDataButton

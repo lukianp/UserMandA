@@ -58,7 +58,7 @@ const WebServerConfigDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="webserverconfig-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="webserverconfig-discovery-view">
       {/* Loading Overlay */}
       {isDiscovering && (
         <LoadingOverlay
@@ -487,7 +487,11 @@ const WebServerConfigDiscoveryView: React.FC = () => {
         isOpen={showExecutionDialog}
         onClose={() => setShowExecutionDialog(false)}
         scriptName="Web Server Configuration Discovery"
-        logs={logs}
+        logs={logs.map(log => ({
+          timestamp: log.timestamp,
+          level: log.level === 'warn' ? ('warning' as const) : log.level,
+          message: log.message
+        }))}
         isRunning={isDiscovering}
         isCancelling={isCancelling}
         progress={progress ? { percentage: progress.percentage, message: progress.message } : undefined}

@@ -34,7 +34,7 @@ const DataClassificationDiscoveryView: React.FC = () => {
 
   return (
     <div
-      className="h-full flex flex-col bg-gray-50 dark:bg-gray-900"
+      className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900"
       data-testid="data-classification-discovery-view"
       data-cy="data-classification-discovery-view"
     >

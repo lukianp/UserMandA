@@ -42,11 +42,11 @@ const AzureLogicAppsDiscoveredView: React.FC = () => {
   } = useAzureLogicAppsDiscoveredLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-testid="azure-logicapps-discovered-view">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden" data-testid="azure-logicapps-discovered-view">
       {isLoading && <LoadingOverlay message="Loading Logic Apps data..." />}
 
       {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg">
             <Workflow className="w-7 h-7" />
@@ -84,7 +84,7 @@ const AzureLogicAppsDiscoveredView: React.FC = () => {
 
       {/* Statistics Cards */}
       {stats && (
-        <div className="grid grid-cols-4 gap-4 p-6">
+        <div className="grid grid-cols-4 gap-4 p-6 flex-shrink-0">
           <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
               <Workflow className="w-8 h-8 opacity-80" />
@@ -168,7 +168,7 @@ const AzureLogicAppsDiscoveredView: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="px-6">
+      <div className="px-6 flex-shrink-0">
         <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
           {[
             { id: 'overview', icon: Workflow, label: 'Overview' },
@@ -190,9 +190,9 @@ const AzureLogicAppsDiscoveredView: React.FC = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0 p-6">
         {activeTab === 'overview' && stats && (
-          <div className="space-y-6 overflow-auto">
+          <div className="space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Workflow Status</h3>

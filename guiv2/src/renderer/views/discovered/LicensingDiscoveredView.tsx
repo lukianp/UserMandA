@@ -64,7 +64,7 @@ const LicensingDiscoveredView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-testid="licensing-discovered-view">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden" data-testid="licensing-discovered-view">
       {isLoading && (
         <LoadingOverlay
           message="Loading licensing data..."
@@ -73,7 +73,7 @@ const LicensingDiscoveredView: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Key className="w-8 h-8 text-yellow-600" />
           <div>
@@ -125,7 +125,7 @@ const LicensingDiscoveredView: React.FC = () => {
 
       {/* Statistics Cards */}
       {stats && (
-        <div className="grid grid-cols-4 gap-4 p-6">
+        <div className="grid grid-cols-4 gap-4 p-6 flex-shrink-0">
           {/* Row 1: Discovery Success FIRST, then Core License Metrics */}
           <DiscoverySuccessCard
             percentage={stats.discoverySuccessPercentage ?? 0}
@@ -259,7 +259,7 @@ const LicensingDiscoveredView: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="px-6">
+      <div className="px-6 flex-shrink-0">
         <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setActiveTab('overview')}
@@ -563,7 +563,7 @@ const LicensingDiscoveredView: React.FC = () => {
             </div>
 
             {/* Data Grid */}
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ minHeight: "600px" }}>
               <VirtualizedDataGrid
                 data={filteredData as any[]}
                 columns={columns}

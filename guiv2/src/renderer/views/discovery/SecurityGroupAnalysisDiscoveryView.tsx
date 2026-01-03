@@ -195,7 +195,7 @@ const SecurityGroupAnalysisDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="security-group-analysis-discovery-view" data-testid="security-group-analysis-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="security-group-analysis-discovery-view" data-testid="security-group-analysis-discovery-view">
       {state.isDiscovering && (
         <LoadingOverlay
           progress={typeof state.progress?.percentage === 'number' ? state.progress.percentage : 0}

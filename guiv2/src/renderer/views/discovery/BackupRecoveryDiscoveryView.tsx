@@ -166,7 +166,7 @@ const BackupRecoveryDiscoveryView: React.FC = () => {
   }, [activeTab, filteredBackupJobs, filteredRecoveryPoints, filteredHistory, filteredStorage]);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="backup-recovery-discovery-view" data-testid="backup-recovery-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="backup-recovery-discovery-view" data-testid="backup-recovery-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}

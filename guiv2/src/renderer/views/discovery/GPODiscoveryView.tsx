@@ -66,7 +66,7 @@ const GPODiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="gpo-discovery-view" data-testid="gpo-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="gpo-discovery-view" data-testid="gpo-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}

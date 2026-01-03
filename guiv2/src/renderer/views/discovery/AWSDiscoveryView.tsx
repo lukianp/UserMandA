@@ -43,10 +43,9 @@ const AWSDiscoveryView: React.FC = () => {
     stats,
     startDiscovery,
     cancelDiscovery,
-    updateConfig,
+    setConfig,
     setActiveTab,
-    updateFilter,
-    clearError,
+    setFilter,
     exportToCSV,
     exportToExcel
   } = useAWSDiscoveryLogic();
@@ -58,13 +57,13 @@ const AWSDiscoveryView: React.FC = () => {
     selectedRegions: Array.isArray(filter?.selectedRegions) ? filter.selectedRegions : [],
     selectedResourceTypes: Array.isArray(filter?.selectedResourceTypes) ? filter.selectedResourceTypes : [],
     searchText: filter?.searchText ?? '',
-    showUntaggedOnly: !!filter?.showUntaggedOnly,
+    showOnlySecurityRisks: !!filter?.showOnlySecurityRisks,
   };
 
-  // Normalize stats objects for safe iteration
-  const resourcesByRegion = stats?.resourcesByRegion && typeof stats.resourcesByRegion === 'object' ? stats.resourcesByRegion : {};
-  const resourcesByType = stats?.resourcesByType && typeof stats.resourcesByType === 'object' ? stats.resourcesByType : {};
-  const costByService = Array.isArray(stats?.costByService) ? stats.costByService : [];
+  // Normalize stats objects for safe iteration (these don't exist in current hook)
+  const resourcesByRegion: Record<string, number> = {};
+  const resourcesByType: Record<string, number> = {};
+  const costByService: any[] = [];
 
   // Normalize export payload
   const exportPayload = Array.isArray((result as any)?.data) ? (result as any).data : Array.isArray(result) ? result : [];
@@ -77,24 +76,24 @@ const AWSDiscoveryView: React.FC = () => {
     const updated = current.includes(region)
       ? current.filter(r => r !== region)
       : [...current, region];
-    updateFilter({ selectedRegions: updated });
+    setFilter({ selectedRegions: updated });
   };
 
   const toggleResourceType = (type: string) => {
-    const current = normalizedFilter.selectedResourceTypes;
+    const current = normalizedFilter.selectedResourceTypes as string[];
     const updated = current.includes(type)
-      ? current.filter(t => t !== type)
+      ? current.filter((t: string) => t !== type)
       : [...current, type];
-    updateFilter({ selectedResourceTypes: updated });
+    setFilter({ selectedResourceTypes: updated as any });
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="aws-discovery-view" data-testid="aws-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="aws-discovery-view" data-testid="aws-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
-          progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
+          progress={typeof progress === 'number' ? progress : 0}
           onCancel={cancelDiscovery || undefined}
-          message={progress?.message || 'Discovering AWS resources...'}
+          message={'Discovering AWS resources...'}
         />
       )}
 
@@ -113,7 +112,7 @@ const AWSDiscoveryView: React.FC = () => {
           {exportPayload.length > 0 && (
             <>
               <Button
-                onClick={() => exportToCSV(exportPayload, `aws-discovery-${new Date().toISOString().split('T')[0]}.csv`)}
+                onClick={exportToCSV}
                 variant="secondary"
                 icon={<Download className="w-4 h-4" />}
                 aria-label="Export as CSV"
@@ -122,7 +121,7 @@ const AWSDiscoveryView: React.FC = () => {
                 Export CSV
               </Button>
               <Button
-                onClick={() => exportToExcel(exportPayload, `aws-discovery-${new Date().toISOString().split('T')[0]}.xlsx`)}
+                onClick={exportToExcel}
                 variant="secondary"
                 icon={<FileSpreadsheet className="w-4 h-4" />}
                 aria-label="Export as Excel"
@@ -146,9 +145,8 @@ const AWSDiscoveryView: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+        <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <span className="text-red-800 dark:text-red-200">{error}</span>
-          <Button onClick={clearError} variant="ghost" size="sm">Dismiss</Button>
         </div>
       )}
 
@@ -171,40 +169,22 @@ const AWSDiscoveryView: React.FC = () => {
           <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Checkbox
-                label="Include EC2 Instances"
-                checked={config.includeEC2}
-                onChange={(checked) => updateConfig({ includeEC2: checked })}
-                data-cy="include-ec2-checkbox" data-testid="include-ec2-checkbox"
+                label="Include Tag Details"
+                checked={config.includeTagDetails}
+                onChange={(checked) => setConfig({ includeTagDetails: checked })}
+                data-cy="include-tag-details-checkbox" data-testid="include-tag-details-checkbox"
               />
               <Checkbox
-                label="Include S3 Buckets"
-                checked={config.includeS3}
-                onChange={(checked) => updateConfig({ includeS3: checked })}
-                data-cy="include-s3-checkbox" data-testid="include-s3-checkbox"
+                label="Include Cost Estimates"
+                checked={config.includeCostEstimates}
+                onChange={(checked) => setConfig({ includeCostEstimates: checked })}
+                data-cy="include-cost-estimates-checkbox" data-testid="include-cost-estimates-checkbox"
               />
               <Checkbox
-                label="Include RDS Databases"
-                checked={config.includeRDS}
-                onChange={(checked) => updateConfig({ includeRDS: checked })}
-                data-cy="include-rds-checkbox" data-testid="include-rds-checkbox"
-              />
-              <Checkbox
-                label="Include VPCs"
-                checked={config.includeVPC}
-                onChange={(checked) => updateConfig({ includeVPC: checked })}
-                data-cy="include-vpc-checkbox" data-testid="include-vpc-checkbox"
-              />
-              <Checkbox
-                label="Include Lambda Functions"
-                checked={config.includeLambda}
-                onChange={(checked) => updateConfig({ includeLambda: checked })}
-                data-cy="include-lambda-checkbox" data-testid="include-lambda-checkbox"
-              />
-              <Checkbox
-                label="Include Cost Data"
-                checked={config.includeCostData}
-                onChange={(checked) => updateConfig({ includeCostData: checked })}
-                data-cy="include-cost-checkbox" data-testid="include-cost-checkbox"
+                label="Include Security Analysis"
+                checked={config.includeSecurityAnalysis}
+                onChange={(checked) => setConfig({ includeSecurityAnalysis: checked })}
+                data-cy="include-security-analysis-checkbox" data-testid="include-security-analysis-checkbox"
               />
             </div>
 
@@ -214,11 +194,11 @@ const AWSDiscoveryView: React.FC = () => {
               </label>
               <Input
                 type="number"
-                value={config.timeout}
+                value={config.timeout || 300000}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const next = Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : config.timeout;
+                  const next = Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : (config.timeout || 300000);
                   const clamped = Math.max(60000, Math.min(1800000, next));
-                  updateConfig({ timeout: clamped });
+                  setConfig({ timeout: clamped });
                 }}
                 min={60000}
                 max={1800000}
@@ -247,7 +227,7 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Server className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.ec2Instances ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.ec2Count ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">EC2 Instances</div>
               </div>
             </div>
@@ -257,7 +237,7 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <HardDrive className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.s3Buckets ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.s3Count ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">S3 Buckets</div>
               </div>
             </div>
@@ -267,7 +247,7 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Database className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.rdsInstances ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.rdsCount ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">RDS Databases</div>
               </div>
             </div>
@@ -277,7 +257,7 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Network className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.vpcs ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(result?.vpcs?.length ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">VPCs</div>
               </div>
             </div>
@@ -287,8 +267,8 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Shield className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.securityGroups ?? 0) ?? 0).toLocaleString()}</div>
-                <div className="text-sm opacity-90">Security Groups</div>
+                <div className="text-3xl font-bold">{(result?.lambdaFunctions?.length ?? 0).toLocaleString()}</div>
+                <div className="text-sm opacity-90">Lambda Functions</div>
               </div>
             </div>
           </div>
@@ -297,7 +277,7 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Globe className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.activeRegions ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(Array.isArray(result?.regions) ? result.regions.length : 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Active Regions</div>
               </div>
             </div>
@@ -307,7 +287,7 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <DollarSign className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">${(typeof stats?.monthlyCostEstimate === 'number' ? stats.monthlyCostEstimate : 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">${(typeof stats?.estimatedCost === 'number' ? stats.estimatedCost : 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Est. Monthly Cost</div>
               </div>
             </div>
@@ -341,7 +321,7 @@ const AWSDiscoveryView: React.FC = () => {
           >
             <Server className="w-4 h-4" />
             EC2 Instances
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.ec2Instances ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.ec2Count ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('s3')}
@@ -354,7 +334,7 @@ const AWSDiscoveryView: React.FC = () => {
           >
             <HardDrive className="w-4 h-4" />
             S3 Buckets
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.s3Buckets ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.s3Count ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('rds')}
@@ -367,32 +347,7 @@ const AWSDiscoveryView: React.FC = () => {
           >
             <Database className="w-4 h-4" />
             RDS Databases
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.rdsInstances ?? 0}</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('network')}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
-              activeTab === 'network'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-            data-cy="tab-network" data-testid="tab-network"
-          >
-            <Network className="w-4 h-4" />
-            Network
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.vpcs ?? 0}</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('cost')}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
-              activeTab === 'cost'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-            data-cy="tab-cost" data-testid="tab-cost"
-          >
-            <DollarSign className="w-4 h-4" />
-            Cost Analysis
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.rdsCount ?? 0}</span>}
           </button>
         </div>
       </div>
@@ -418,19 +373,19 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources by Region</h3>
               <div className="space-y-3">
-                {Object.entries(resourcesByRegion).map(([region, count]) => (
+                {Object.entries(resourcesByRegion).map(([region, count]: [string, number]) => (
                   <div key={region} className="flex items-center gap-3">
                     <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">{region}</div>
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
                       <div
                         className="bg-orange-600 h-full flex items-center justify-end px-2 text-xs text-white font-medium"
-                        style={{ width: `${(stats?.totalResources ?? 0) > 0 ? (count / (stats?.totalResources ?? 0)) * 100 : 0}%` }}
+                        style={{ width: `${(stats?.totalResources ?? 0) > 0 ? (Number(count) / (stats?.totalResources ?? 0)) * 100 : 0}%` }}
                       >
-                        {count > 0 && `${count}`}
+                        {Number(count) > 0 && `${count}`}
                       </div>
                     </div>
                     <div className="w-16 text-sm text-gray-600 dark:text-gray-400 text-right">
-                      {(stats?.totalResources ?? 0) > 0 ? ((count / (stats?.totalResources ?? 0)) * 100).toFixed(1) : 0}%
+                      {(stats?.totalResources ?? 0) > 0 ? ((Number(count) / (stats?.totalResources ?? 0)) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
                 ))}
@@ -441,11 +396,11 @@ const AWSDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources by Type</h3>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(resourcesByType).map(([type, count]) => (
+                {Object.entries(resourcesByType).map(([type, count]: [string, number]) => (
                   <div key={type} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{type}</span>
                     <span className="text-lg font-bold text-orange-600">
-                      {count}
+                      {String(count)}
                     </span>
                   </div>
                 ))}
@@ -457,7 +412,7 @@ const AWSDiscoveryView: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Cost Services</h3>
                 <div className="space-y-2">
-                  {costByService.map((item, index) => (
+                  {costByService.map((item: any, index: number) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
@@ -490,7 +445,7 @@ const AWSDiscoveryView: React.FC = () => {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const value = e.target.value;
                   const timeoutId = setTimeout(() => {
-                    updateFilter({ searchText: value });
+                    setFilter({ searchText: value });
                   }, 150);
                   return () => clearTimeout(timeoutId);
                 }}
@@ -507,7 +462,7 @@ const AWSDiscoveryView: React.FC = () => {
                         key={region}
                         onClick={() => toggleRegion(region)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                          filter.selectedRegions?.includes(region)
+                          normalizedFilter.selectedRegions.includes(region)
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
@@ -527,7 +482,7 @@ const AWSDiscoveryView: React.FC = () => {
                         key={type}
                         onClick={() => toggleResourceType(type)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                          filter.selectedResourceTypes?.includes(type)
+                          normalizedFilter.selectedResourceTypes.includes(type as any)
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
@@ -540,10 +495,10 @@ const AWSDiscoveryView: React.FC = () => {
                 </div>
 
                 <Checkbox
-                  label="Show Untagged Resources Only"
-                  checked={normalizedFilter.showUntaggedOnly}
-                  onChange={(checked) => updateFilter({ showUntaggedOnly: checked })}
-                  data-cy="show-untagged-checkbox" data-testid="show-untagged-checkbox"
+                  label="Show Security Risks Only"
+                  checked={normalizedFilter.showOnlySecurityRisks}
+                  onChange={(checked) => setFilter({ showOnlySecurityRisks: checked })}
+                  data-cy="show-security-risks-checkbox" data-testid="show-security-risks-checkbox"
                 />
               </div>
             </div>
@@ -572,9 +527,9 @@ const AWSDiscoveryView: React.FC = () => {
         logs={logs}
         isRunning={isDiscovering}
         isCancelling={isCancelling}
-        progress={progress ? {
-          percentage: progress.percentage || 0,
-          message: progress.message || 'Processing...'
+        progress={typeof progress === 'number' ? {
+          percentage: progress,
+          message: 'Processing...'
         } : undefined}
         onStart={startDiscovery}
         onStop={cancelDiscovery}

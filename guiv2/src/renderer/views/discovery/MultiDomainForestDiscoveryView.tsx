@@ -81,7 +81,7 @@ const MultiDomainForestDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="multi-domain-forest-discovery-view" data-testid="multi-domain-forest-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="multi-domain-forest-discovery-view" data-testid="multi-domain-forest-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
@@ -286,7 +286,7 @@ const MultiDomainForestDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Shield className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.healthScore ?? 0).toFixed(0)}%</div>
+                <div className="text-3xl font-bold">{Number(stats?.healthScore ?? 0).toFixed(0)}%</div>
                 <div className="text-sm opacity-90">Health Score</div>
               </div>
             </div>
@@ -367,37 +367,41 @@ const MultiDomainForestDiscoveryView: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'overview' && stats && (stats?.totalDomains ?? 0) > 0 && (
+        {activeTab === 'overview' && stats && Number(stats?.totalDomains ?? 0) > 0 && (
           <div className="space-y-6 overflow-auto">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Domains by Functional Level</h3>
               <div className="space-y-3">
-                {Object.entries(domainsByFunctionalLevel).map(([level, count]) => (
+                {Object.entries(domainsByFunctionalLevel).map(([level, count]: [string, unknown]) => {
+                  const numCount = Number(count);
+                  const totalDomains = Number(stats?.totalDomains ?? 0);
+                  return (
                   <div key={level} className="flex items-center gap-3">
                     <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">{level}</div>
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
                       <div
                         className="bg-green-600 h-full flex items-center justify-end px-2 text-xs text-white font-medium"
-                        style={{ width: `${(stats?.totalDomains ?? 0) > 0 ? (count / (stats?.totalDomains ?? 0)) * 100 : 0}%` }}
+                        style={{ width: `${totalDomains > 0 ? (numCount / totalDomains) * 100 : 0}%` }}
                       >
-                        {count > 0 && `${count}`}
+                        {numCount > 0 && `${numCount}`}
                       </div>
                     </div>
                     <div className="w-16 text-sm text-gray-600 dark:text-gray-400 text-right">
-                      {(stats?.totalDomains ?? 0) > 0 ? ((count / (stats?.totalDomains ?? 0)) * 100).toFixed(1) : 0}%
+                      {totalDomains > 0 ? ((numCount / totalDomains) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Sites by Region</h3>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(sitesByRegion).map(([region, count]) => (
+                {Object.entries(sitesByRegion).map(([region, count]: [string, unknown]) => (
                   <div key={region} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{region}</span>
-                    <span className="text-lg font-bold text-green-600">{count}</span>
+                    <span className="text-lg font-bold text-green-600">{String(count)}</span>
                   </div>
                 ))}
               </div>

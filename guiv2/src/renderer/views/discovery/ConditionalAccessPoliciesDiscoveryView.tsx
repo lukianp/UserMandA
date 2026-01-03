@@ -55,7 +55,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="conditional-access-policies-discovery-view" data-testid="conditional-access-policies-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="conditional-access-policies-discovery-view" data-testid="conditional-access-policies-discovery-view">
       {/* Loading Overlay */}
       {isDiscovering && (
         <LoadingOverlay

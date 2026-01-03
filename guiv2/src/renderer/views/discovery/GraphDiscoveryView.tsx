@@ -60,7 +60,7 @@ const GraphDiscoveryView: React.FC = () => {
   const exportPayload = Array.isArray(filteredData) ? filteredData : [];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="graph-discovery-view" data-testid="graph-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="graph-discovery-view" data-testid="graph-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}

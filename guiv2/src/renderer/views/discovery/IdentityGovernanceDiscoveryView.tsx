@@ -64,7 +64,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="identity-governance-discovery-view" data-testid="identity-governance-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="identity-governance-discovery-view" data-testid="identity-governance-discovery-view">
       {/* FULLY FUNCTIONAL Loading Overlay with real progress */}
       {isDiscovering && (
         <LoadingOverlay

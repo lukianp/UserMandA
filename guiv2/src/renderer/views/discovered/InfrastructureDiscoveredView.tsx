@@ -129,9 +129,9 @@ export const InfrastructureDiscoveredView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="infrastructure-discovered-view">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden" data-cy="infrastructure-discovered-view">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg">
             <Server size={28} />

@@ -192,7 +192,7 @@ const OverviewTab: React.FC<{
                       />
                     </div>
                     <span className="text-sm font-medium text-gray-900 dark:text-white w-8">
-                      {count}
+                      {String(count)}
                     </span>
                   </div>
                 </div>
@@ -273,9 +273,9 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
             <Network size={28} />
@@ -372,7 +372,7 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex gap-2 overflow-x-auto">
           <TabButton
             active={activeTab === 'overview'}
@@ -438,14 +438,14 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {activeTab === 'overview' && <OverviewTab statistics={statistics} />}
 
         {activeTab !== 'overview' && (() => {
           // Define columns based on active tab
           let columns: any[] = [];
 
-          if (activeTab === 'dnsServers') {
+          if (activeTab === 'dns-servers') {
             columns = [
               { field: 'IPAddress', headerName: 'IP Address', width: 150 },
               { field: 'Name', headerName: 'Name', width: 200 },
@@ -456,7 +456,7 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
               { field: 'Forest', headerName: 'Forest', width: 150 },
               { field: 'Domain', headerName: 'Domain', width: 150 },
             ];
-          } else if (activeTab === 'dnsZones') {
+          } else if (activeTab === 'dns-zones') {
             columns = [
               { field: 'ZoneName', headerName: 'Zone Name', width: 250 },
               { field: 'ZoneType', headerName: 'Zone Type', width: 150 },
@@ -465,7 +465,7 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
               { field: 'ReplicationScope', headerName: 'Replication Scope', width: 180 },
               { field: 'IsReverseLookupZone', headerName: 'Reverse Zone', width: 140 },
             ];
-          } else if (activeTab === 'dnsRecords') {
+          } else if (activeTab === 'dns-records') {
             columns = [
               { field: 'ZoneName', headerName: 'Zone Name', width: 200 },
               { field: 'RecordName', headerName: 'Record Name', width: 250 },
@@ -473,7 +473,7 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
               { field: 'RecordData', headerName: 'Data', width: 300 },
               { field: 'TimeToLive', headerName: 'TTL', width: 100 },
             ];
-          } else if (activeTab === 'dhcpServers') {
+          } else if (activeTab === 'dhcp-servers') {
             columns = [
               { field: 'Name', headerName: 'Name', width: 200 },
               { field: 'ComputerName', headerName: 'Computer Name', width: 200 },
@@ -481,7 +481,7 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
               { field: 'Source', headerName: 'Source', width: 150 },
               { field: 'Status', headerName: 'Status', width: 120 },
             ];
-          } else if (activeTab === 'dhcpScopes') {
+          } else if (activeTab === 'dhcp-scopes') {
             columns = [
               { field: 'ScopeId', headerName: 'Scope ID', width: 150 },
               { field: 'Name', headerName: 'Name', width: 200 },
@@ -490,7 +490,7 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
               { field: 'SubnetMask', headerName: 'Subnet Mask', width: 150 },
               { field: 'State', headerName: 'State', width: 120 },
             ];
-          } else if (activeTab === 'dhcpLeases') {
+          } else if (activeTab === 'dhcp-leases') {
             columns = [
               { field: 'IPAddress', headerName: 'IP Address', width: 150 },
               { field: 'ClientId', headerName: 'Client ID', width: 200 },
@@ -498,7 +498,7 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
               { field: 'AddressState', headerName: 'State', width: 120 },
               { field: 'LeaseExpiryTime', headerName: 'Expiry Time', width: 180 },
             ];
-          } else if (activeTab === 'dhcpReservations') {
+          } else if (activeTab === 'dhcp-reservations') {
             columns = [
               { field: 'IPAddress', headerName: 'IP Address', width: 150 },
               { field: 'ClientId', headerName: 'Client ID', width: 200 },
@@ -531,7 +531,7 @@ export const DnsdhcpDiscoveredView: React.FC = () => {
                 <VirtualizedDataGrid
                   data={filteredData as any[]}
                   columns={columns}
-                  loading={isLoading}
+                  loading={loading}
                   enableColumnReorder
                   enableColumnResize
                 />

@@ -34,7 +34,7 @@ export default function NetworkInfrastructureDiscoveryView() {
   const [showConfig, setShowConfig] = useState(true);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-testid="network-infrastructure-discovery-view" data-cy="network-infrastructure-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-testid="network-infrastructure-discovery-view" data-cy="network-infrastructure-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}

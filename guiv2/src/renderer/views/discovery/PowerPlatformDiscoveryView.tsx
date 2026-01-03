@@ -71,7 +71,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="power-platform-discovery-view" data-testid="power-platform-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="power-platform-discovery-view" data-testid="power-platform-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}

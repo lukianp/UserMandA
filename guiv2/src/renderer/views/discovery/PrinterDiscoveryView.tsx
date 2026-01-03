@@ -63,7 +63,7 @@ const PrinterDiscoveryView: React.FC = () => {
   const exportPayload = Array.isArray(result?.data) ? result.data : [];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="printer-discovery-view" data-testid="printer-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="printer-discovery-view" data-testid="printer-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
@@ -483,7 +483,7 @@ const PrinterDiscoveryView: React.FC = () => {
 
             {/* Data Grid */}
             {filteredData.length > 0 ? (
-              <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="flex-1 overflow-auto bg-white dark:bg-gray-800 rounded-lg shadow">
                 <VirtualizedDataGrid
                   data={filteredData}
                   columns={columns}

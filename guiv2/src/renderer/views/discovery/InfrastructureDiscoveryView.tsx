@@ -63,7 +63,7 @@ const InfrastructureDiscoveryView: React.FC = () => {
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="infrastructure-discovery-view" data-testid="infrastructure-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="infrastructure-discovery-view" data-testid="infrastructure-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
@@ -751,7 +751,7 @@ const InfrastructureDiscoveryView: React.FC = () => {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
         {result ? (
           <div className="h-full overflow-y-auto p-6" data-cy="results-content" data-testid="results-content">
             <div className="max-w-6xl mx-auto space-y-6">

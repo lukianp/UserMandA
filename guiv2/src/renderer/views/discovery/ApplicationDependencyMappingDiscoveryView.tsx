@@ -67,7 +67,7 @@ const ApplicationDependencyMappingDiscoveryView: React.FC = () => {
   const exportPayload = Array.isArray((result as any)?.data) ? (result as any).data : Array.isArray(result) ? result : [];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="application-dependency-mapping-discovery-view" data-testid="application-dependency-mapping-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="application-dependency-mapping-discovery-view" data-testid="application-dependency-mapping-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}

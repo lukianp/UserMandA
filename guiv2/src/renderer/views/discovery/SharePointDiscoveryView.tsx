@@ -156,7 +156,7 @@ const SharePointDiscoveryView: React.FC = () => {
   const statistics = liveStats || (richStats.totalSites > 0 ? richStats : discoveryStats);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="sharepoint-discovery-view" data-testid="sharepoint-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="sharepoint-discovery-view" data-testid="sharepoint-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-6">
@@ -504,7 +504,7 @@ const SharePointDiscoveryView: React.FC = () => {
           )}
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
             {selectedTab === 'overview' ? (
               <OverviewTab result={result} contentTypes={contentTypes} sharingLinks={sharingLinks} siteAdmins={siteAdmins} hubSites={hubSites} />
             ) : (

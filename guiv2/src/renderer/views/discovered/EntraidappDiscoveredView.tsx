@@ -33,6 +33,7 @@ export const EntraidappDiscoveredView: React.FC = () => {
     error,
     filteredData,
     statistics,
+    columns,
     exportToCSV,
   } = useEntraIDAppDiscoveredLogic();
 
@@ -59,9 +60,9 @@ export const EntraidappDiscoveredView: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
             <Settings size={28} />
@@ -159,7 +160,7 @@ export const EntraidappDiscoveredView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex gap-2">
           <TabButton
             active={activeTab === 'overview'}
@@ -195,15 +196,15 @@ export const EntraidappDiscoveredView: React.FC = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {activeTab === 'overview' && (
           <OverviewTab statistics={statistics} />
         )}
 
         {activeTab !== 'overview' && (
-          <div className="h-full flex flex-col p-6">
+          <div className="h-screen flex flex-col p-6 overflow-hidden">
             {/* Search and Export */}
-            <div className="flex gap-4 mb-4">
+            <div className="flex gap-4 mb-4 flex-shrink-0">
               <input
                 type="text"
                 value={searchTerm}
@@ -220,13 +221,12 @@ export const EntraidappDiscoveredView: React.FC = () => {
             </div>
 
             {/* Data Grid */}
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ minHeight: "600px" }}>
               <VirtualizedDataGrid
                 data={filteredData}
+                columns={columns}
                 enableFiltering={true}
                 enableColumnResize={true}
-                enableSorting={true}
-                csvFileName={getCSVFileName(activeTab)}
               />
             </div>
           </div>

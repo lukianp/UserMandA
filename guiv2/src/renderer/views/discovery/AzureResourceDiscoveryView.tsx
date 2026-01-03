@@ -121,7 +121,7 @@ const AzureResourceDiscoveryView: React.FC = () => {
   })();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="azure-resource-discovery-view" data-testid="azure-resource-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="azure-resource-discovery-view" data-testid="azure-resource-discovery-view">
       {isRunning && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}

@@ -73,7 +73,7 @@ const HyperVDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="hyper-v-discovery-view" data-testid="hyper-v-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="hyper-v-discovery-view" data-testid="hyper-v-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}

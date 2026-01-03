@@ -63,7 +63,7 @@ const Office365DiscoveryView: React.FC = () => {
   } = useOffice365DiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="o365-discovery-view" data-testid="o365-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="o365-discovery-view" data-testid="o365-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-6">
@@ -377,7 +377,7 @@ const Office365DiscoveryView: React.FC = () => {
           )}
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
             {selectedTab === 'overview' ? (
               <OverviewTab result={currentResult} />
             ) : (

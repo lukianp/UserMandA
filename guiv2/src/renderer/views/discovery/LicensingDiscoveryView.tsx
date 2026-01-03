@@ -242,7 +242,7 @@ const LicensingDiscoveryView: React.FC = () => {
   }, [stats]);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="licensing-discovery-view" data-testid="licensing-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="licensing-discovery-view" data-testid="licensing-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}

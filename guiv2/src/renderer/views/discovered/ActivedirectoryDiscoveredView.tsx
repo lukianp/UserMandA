@@ -129,9 +129,9 @@ const ActivedirectoryDiscoveredView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="ad-discovered-view">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden" data-cy="ad-discovered-view">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center justify-between p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
@@ -162,9 +162,9 @@ const ActivedirectoryDiscoveredView: React.FC = () => {
 
       {/* Content */}
       {hasData ? (
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {/* Summary Stats */}
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               <StatCard
                 icon={<Users className="w-5 h-5" />}
@@ -227,7 +227,7 @@ const ActivedirectoryDiscoveredView: React.FC = () => {
           </div>
 
           {/* Tabs */}
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex items-center gap-1 px-4 overflow-x-auto">
               <TabButton
                 active={selectedTab === 'overview'}
@@ -288,7 +288,7 @@ const ActivedirectoryDiscoveredView: React.FC = () => {
 
           {/* Search and Actions */}
           {selectedTab !== 'overview' && (
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex-1 max-w-md">
                   <SearchBar
@@ -312,11 +312,11 @@ const ActivedirectoryDiscoveredView: React.FC = () => {
           )}
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50 dark:bg-gray-900">
             {selectedTab === 'overview' ? (
               <OverviewTab stats={stats} usersData={usersData} groupsData={groupsData} />
             ) : (
-              <div className="h-full p-4">
+              <div className="p-4" style={{ minHeight: '600px' }}>
                 <VirtualizedDataGrid
                   data={filteredData}
                   columns={currentTabData.columns}
@@ -328,7 +328,7 @@ const ActivedirectoryDiscoveredView: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center min-h-0">
           <div className="text-center max-w-md">
             <Database className="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">

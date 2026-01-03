@@ -63,7 +63,7 @@ const OneDriveDiscoveryView: React.FC = () => {
   } = useOneDriveDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="onedrive-discovery-view" data-testid="onedrive-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="onedrive-discovery-view" data-testid="onedrive-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4">
@@ -421,7 +421,7 @@ const OneDriveDiscoveryView: React.FC = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
+        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
           {selectedTab === 'overview' && currentResult ? (
             <div className="h-full overflow-y-auto p-6" data-cy="overview-content" data-testid="overview-content">
               <div className="max-w-6xl mx-auto space-y-6">

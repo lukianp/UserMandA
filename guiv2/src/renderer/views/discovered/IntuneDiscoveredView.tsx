@@ -68,7 +68,7 @@ const IntuneDiscoveredView: React.FC = () => {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
           <p className="text-gray-600 dark:text-gray-400">Loading Intune data...</p>
         </div>
       </div>
@@ -76,9 +76,9 @@ const IntuneDiscoveredView: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
             <Smartphone size={28} />
@@ -126,7 +126,7 @@ const IntuneDiscoveredView: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="px-6 pt-4">
+      <div className="px-6 pt-4 flex-shrink-0">
         <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
           {tabs.map(tab => (
             <button
@@ -161,7 +161,7 @@ const IntuneDiscoveredView: React.FC = () => {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-auto px-6 pb-6">
+      <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
         {activeTab === 'overview' && (
           <div className="space-y-6 pt-4">
             {/* Statistics Cards - Row 1 */}
@@ -433,7 +433,6 @@ const IntuneDiscoveredView: React.FC = () => {
             <VirtualizedDataGrid
               data={devices}
               columns={deviceColumns}
-              getRowId={(row) => row.DeviceId || Math.random().toString()}
             />
           </div>
         )}
@@ -443,7 +442,6 @@ const IntuneDiscoveredView: React.FC = () => {
             <VirtualizedDataGrid
               data={configurations}
               columns={configurationColumns}
-              getRowId={(row) => row.ConfigurationId || Math.random().toString()}
             />
           </div>
         )}
@@ -453,7 +451,6 @@ const IntuneDiscoveredView: React.FC = () => {
             <VirtualizedDataGrid
               data={compliancePolicies}
               columns={compliancePolicyColumns}
-              getRowId={(row) => row.PolicyId || Math.random().toString()}
             />
           </div>
         )}
@@ -463,7 +460,6 @@ const IntuneDiscoveredView: React.FC = () => {
             <VirtualizedDataGrid
               data={appProtectionPolicies}
               columns={appProtectionColumns}
-              getRowId={(row) => row.PolicyId || Math.random().toString()}
             />
           </div>
         )}
@@ -473,7 +469,6 @@ const IntuneDiscoveredView: React.FC = () => {
             <VirtualizedDataGrid
               data={apps}
               columns={appColumns}
-              getRowId={(row) => row.AppId || Math.random().toString()}
             />
           </div>
         )}

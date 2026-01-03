@@ -102,7 +102,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="web-server-configuration-discovery-view" data-testid="web-server-configuration-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="web-server-configuration-discovery-view" data-testid="web-server-configuration-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress}
@@ -169,7 +169,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
           </div>
           <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg border border-purple-200 dark:border-purple-700">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {stats?.serversByType ? Object.keys(stats.serversByType).filter(type => stats.serversByType[type] > 0).length : 0}
+              {stats?.serversByType ? Object.keys(stats.serversByType).filter(type => (stats.serversByType as any)[type] > 0).length : 0}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Server Types</div>
           </div>

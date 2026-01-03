@@ -54,7 +54,7 @@ const ScheduledTaskDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="scheduled-task-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="scheduled-task-discovery-view">
       {/* Loading Overlay */}
       {isDiscovering && (
         <LoadingOverlay

@@ -55,7 +55,7 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="data-loss-prevention-discovery-view" data-testid="data-loss-prevention-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="data-loss-prevention-discovery-view" data-testid="data-loss-prevention-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}

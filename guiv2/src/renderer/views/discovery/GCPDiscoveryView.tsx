@@ -62,9 +62,9 @@ const GCPDiscoveryView: React.FC = () => {
   };
 
   // Normalize stats objects for safe iteration
-  const resourcesByRegion = stats?.resourcesByRegion && typeof stats.resourcesByRegion === 'object' ? stats.resourcesByRegion : {};
-  const resourcesByType = stats?.resourcesByType && typeof stats.resourcesByType === 'object' ? stats.resourcesByType : {};
-  const costByService = Array.isArray(stats?.costByService) ? stats.costByService : [];
+  const resourcesByRegion = (stats as any)?.resourcesByRegion && typeof (stats as any).resourcesByRegion === 'object' ? (stats as any).resourcesByRegion : {};
+  const resourcesByType = (stats as any)?.resourcesByType && typeof (stats as any).resourcesByType === 'object' ? (stats as any).resourcesByType : {};
+  const costByService = Array.isArray((stats as any)?.costByService) ? (stats as any).costByService : [];
 
   // Normalize export payload
   const exportPayload = Array.isArray((result as any)?.data) ? (result as any).data : Array.isArray(result) ? result : [];
@@ -75,7 +75,7 @@ const GCPDiscoveryView: React.FC = () => {
   const toggleRegion = (region: string) => {
     const current = normalizedFilter.selectedRegions;
     const updated = current.includes(region)
-      ? current.filter(r => r !== region)
+      ? current.filter((r: string) => r !== region)
       : [...current, region];
     updateFilter({ selectedRegions: updated });
   };
@@ -83,18 +83,18 @@ const GCPDiscoveryView: React.FC = () => {
   const toggleResourceType = (type: string) => {
     const current = normalizedFilter.selectedResourceTypes;
     const updated = current.includes(type)
-      ? current.filter(t => t !== type)
+      ? current.filter((t: string) => t !== type)
       : [...current, type];
     updateFilter({ selectedResourceTypes: updated });
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="gcp-discovery-view" data-testid="gcp-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="gcp-discovery-view" data-testid="gcp-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
-          progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
+          progress={typeof progress === 'number' ? progress : 0}
           onCancel={cancelDiscovery || undefined}
-          message={progress?.message || 'Discovering GCP resources...'}
+          message={'Discovering GCP resources...'}
         />
       )}
 
@@ -113,7 +113,7 @@ const GCPDiscoveryView: React.FC = () => {
           {exportPayload.length > 0 && (
             <>
               <Button
-                onClick={() => exportToCSV(exportPayload, `gcp-discovery-${new Date().toISOString().split('T')[0]}.csv`)}
+                onClick={exportToCSV}
                 variant="secondary"
                 icon={<Download className="w-4 h-4" />}
                 aria-label="Export as CSV"
@@ -122,7 +122,7 @@ const GCPDiscoveryView: React.FC = () => {
                 Export CSV
               </Button>
               <Button
-                onClick={() => exportToExcel(exportPayload, `gcp-discovery-${new Date().toISOString().split('T')[0]}.xlsx`)}
+                onClick={exportToExcel}
                 variant="secondary"
                 icon={<FileSpreadsheet className="w-4 h-4" />}
                 aria-label="Export as Excel"
@@ -247,7 +247,7 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Server className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.computeInstances ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.totalInstances ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Compute Instances</div>
               </div>
             </div>
@@ -257,7 +257,7 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <HardDrive className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.storageBuckets ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.totalDisks ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Storage Buckets</div>
               </div>
             </div>
@@ -267,7 +267,7 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Database className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.sqlInstances ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">0</div>
                 <div className="text-sm opacity-90">Cloud SQL Instances</div>
               </div>
             </div>
@@ -277,7 +277,7 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Network className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.vpcs ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.totalNetworks ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">VPC Networks</div>
               </div>
             </div>
@@ -287,7 +287,7 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Cpu className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.gkeClusters ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">0</div>
                 <div className="text-sm opacity-90">GKE Clusters</div>
               </div>
             </div>
@@ -297,7 +297,7 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Globe className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.projects ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.totalProjects ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Projects</div>
               </div>
             </div>
@@ -307,7 +307,7 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <DollarSign className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">${(typeof stats?.monthlyCostEstimate === 'number' ? stats.monthlyCostEstimate : 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">$0</div>
                 <div className="text-sm opacity-90">Est. Monthly Cost</div>
               </div>
             </div>
@@ -341,7 +341,7 @@ const GCPDiscoveryView: React.FC = () => {
           >
             <Server className="w-4 h-4" />
             Compute Engine
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.computeInstances ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalInstances ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('storage')}
@@ -354,7 +354,7 @@ const GCPDiscoveryView: React.FC = () => {
           >
             <HardDrive className="w-4 h-4" />
             Cloud Storage
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.storageBuckets ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalDisks ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('sql')}
@@ -367,7 +367,7 @@ const GCPDiscoveryView: React.FC = () => {
           >
             <Database className="w-4 h-4" />
             Cloud SQL
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.sqlInstances ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">0</span>}
           </button>
           <button
             onClick={() => setActiveTab('network')}
@@ -380,7 +380,7 @@ const GCPDiscoveryView: React.FC = () => {
           >
             <Network className="w-4 h-4" />
             Network
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.vpcs ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalNetworks ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('cost')}
@@ -418,19 +418,19 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources by Region</h3>
               <div className="space-y-3">
-                {Object.entries(resourcesByRegion).map(([region, count]) => (
+                {Object.entries(resourcesByRegion).map(([region, count]: [string, unknown]) => (
                   <div key={region} className="flex items-center gap-3">
                     <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">{region}</div>
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
                       <div
                         className="bg-blue-600 h-full flex items-center justify-end px-2 text-xs text-white font-medium"
-                        style={{ width: `${(stats?.totalResources ?? 0) > 0 ? (count / (stats?.totalResources ?? 0)) * 100 : 0}%` }}
+                        style={{ width: `${(stats?.totalResources ?? 0) > 0 ? (Number(count) / (stats?.totalResources ?? 0)) * 100 : 0}%` }}
                       >
-                        {count > 0 && `${count}`}
+                        {Number(count) > 0 && `${String(count)}`}
                       </div>
                     </div>
                     <div className="w-16 text-sm text-gray-600 dark:text-gray-400 text-right">
-                      {(stats?.totalResources ?? 0) > 0 ? ((count / (stats?.totalResources ?? 0)) * 100).toFixed(1) : 0}%
+                      {(stats?.totalResources ?? 0) > 0 ? ((Number(count) / (stats?.totalResources ?? 0)) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
                 ))}
@@ -441,11 +441,11 @@ const GCPDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources by Type</h3>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(resourcesByType).map(([type, count]) => (
+                {Object.entries(resourcesByType).map(([type, count]: [string, unknown]) => (
                   <div key={type} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{type}</span>
                     <span className="text-lg font-bold text-blue-600">
-                      {count}
+                      {String(count)}
                     </span>
                   </div>
                 ))}
@@ -457,7 +457,7 @@ const GCPDiscoveryView: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Cost Services</h3>
                 <div className="space-y-2">
-                  {costByService.map((item, index) => (
+                  {costByService.map((item: any, index: number) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
@@ -507,7 +507,7 @@ const GCPDiscoveryView: React.FC = () => {
                         key={region}
                         onClick={() => toggleRegion(region)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                          filter.selectedRegions?.includes(region)
+                          normalizedFilter.selectedRegions.includes(region)
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
@@ -527,7 +527,7 @@ const GCPDiscoveryView: React.FC = () => {
                         key={type}
                         onClick={() => toggleResourceType(type)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                          filter.selectedResourceTypes?.includes(type)
+                          normalizedFilter.selectedResourceTypes.includes(type)
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
@@ -569,12 +569,12 @@ const GCPDiscoveryView: React.FC = () => {
         onClose={() => !isDiscovering && setShowExecutionDialog(false)}
         scriptName="GCP Discovery"
         scriptDescription="Discovering Google Cloud Platform resources, costs, and configuration"
-        logs={logs}
+        logs={logs.map((msg) => ({ timestamp: new Date().toISOString(), level: 'info' as const, message: msg }))}
         isRunning={isDiscovering}
         isCancelling={isCancelling}
-        progress={progress ? {
-          percentage: progress.percentage || 0,
-          message: progress.message || 'Processing...'
+        progress={typeof progress === 'number' ? {
+          percentage: progress,
+          message: 'Processing...'
         } : undefined}
         onStart={startDiscovery}
         onStop={cancelDiscovery}

@@ -142,7 +142,7 @@ const EntraIDM365DiscoveredView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-testid="entraid-m365-discovered-view">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden" data-testid="entraid-m365-discovered-view">
       {isLoading && (
         <LoadingOverlay
           message="Loading Entra ID & M365 data..."
@@ -151,7 +151,7 @@ const EntraIDM365DiscoveredView: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-lg">
             <Cloud className="w-7 h-7" />
@@ -205,7 +205,7 @@ const EntraIDM365DiscoveredView: React.FC = () => {
 
       {/* Statistics Cards */}
       {stats && (
-        <div className="grid grid-cols-4 gap-4 p-6">
+        <div className="grid grid-cols-4 gap-4 p-6 flex-shrink-0">
           {/* Row 1: Discovery Success FIRST, then User Metrics */}
           <DiscoverySuccessCard
             percentage={stats.discoverySuccessPercentage}
@@ -339,7 +339,7 @@ const EntraIDM365DiscoveredView: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="px-6">
+      <div className="px-6 flex-shrink-0">
         <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setActiveTab('overview')}
@@ -448,9 +448,9 @@ const EntraIDM365DiscoveredView: React.FC = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0 p-6">
         {activeTab === 'overview' && stats && (
-          <div className="space-y-6 overflow-auto">
+          <div className="space-y-6">
             {/* User Breakdown */}
             <div className="grid grid-cols-2 gap-6">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -701,7 +701,7 @@ const EntraIDM365DiscoveredView: React.FC = () => {
             </div>
 
             {/* Data Grid */}
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ minHeight: "600px" }}>
               <VirtualizedDataGrid
                 data={filteredData as any[]}
                 columns={columns}
@@ -715,7 +715,7 @@ const EntraIDM365DiscoveredView: React.FC = () => {
 
         {/* Group Members Tab - Hierarchical View */}
         {activeTab === 'groupmembers' && (
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="space-y-4">
             {/* Search and Controls */}
             <div className="mb-4 flex gap-4 items-center">
               <div className="flex-1">

@@ -94,9 +94,9 @@ export const SharepointDiscoveredView: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg">
@@ -204,7 +204,7 @@ export const SharepointDiscoveredView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-x-auto flex-shrink-0">
         <div className="flex gap-2 min-w-max">
           <TabButton
             active={activeTab === 'overview'}
@@ -451,9 +451,9 @@ const DataTab: React.FC<DataTabProps> = ({
   emptyMessage = 'No data available.',
 }) => {
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="h-screen flex flex-col p-6 overflow-hidden">
       {/* Search and Export */}
-      <div className="flex gap-4 mb-4">
+      <div className="flex gap-4 mb-4 flex-shrink-0">
         <input
           type="text"
           value={searchTerm}
@@ -472,7 +472,7 @@ const DataTab: React.FC<DataTabProps> = ({
 
       {/* Data Grid or Empty State */}
       {data.length > 0 ? (
-        <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ minHeight: "600px" }}>
           <VirtualizedDataGrid
             data={data}
             columns={columns}

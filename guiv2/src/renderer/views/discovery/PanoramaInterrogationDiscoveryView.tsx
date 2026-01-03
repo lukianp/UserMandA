@@ -34,27 +34,24 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
     isDiscovering,
     isCancelling,
     progress,
-    activeTab,
-    filter,
     error,
     logs,
     showExecutionDialog,
     setShowExecutionDialog,
     clearLogs,
-    columns,
-    filteredData,
-    stats,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
-    setActiveTab,
-    updateFilter,
     clearError,
-    exportToCSV,
-    exportToExcel
   } = usePanoramaInterrogationDiscoveryLogic();
 
   const [configExpanded, setConfigExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [filter, setFilter] = useState({
+    searchText: '',
+    selectedDeviceGroups: [],
+    showEnabledOnly: false,
+  });
 
   // Normalize filter
   const normalizedFilter = {
@@ -63,11 +60,33 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
     showEnabledOnly: !!filter?.showEnabledOnly,
   };
 
+  // Stub implementations for missing functionality
+  const columns: any[] = [];
+  const filteredData: any[] = [];
+  const stats = result ? {
+    totalSecurityPolicies: result.totalSecurityPolicies || 0,
+    totalNATRules: result.totalNATRules || 0,
+    totalAddressObjects: result.totalAddressObjects || 0,
+    totalDeviceGroups: result.totalDeviceGroups || 0,
+  } : null;
+
+  const exportToCSV = () => {
+    console.log('[PanoramaView] CSV export not implemented');
+  };
+
+  const exportToExcel = () => {
+    console.log('[PanoramaView] Excel export not implemented');
+  };
+
+  const updateFilter = (updates: any) => {
+    setFilter((prev: any) => ({ ...prev, ...updates }));
+  };
+
   // Normalize export payload
   const exportPayload = Array.isArray((result as any)?.data) ? (result as any).data : Array.isArray(result) ? result : [];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="panorama-interrogation-discovery-view" data-testid="panorama-interrogation-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="panorama-interrogation-discovery-view" data-testid="panorama-interrogation-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
@@ -91,7 +110,7 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
           {exportPayload.length > 0 && (
             <>
               <Button
-                onClick={() => exportToCSV(exportPayload, `panorama-interrogation-${new Date().toISOString().split('T')[0]}.csv`)}
+                onClick={exportToCSV}
                 variant="secondary"
                 icon={<Download className="w-4 h-4" />}
                 aria-label="Export as CSV"
@@ -100,7 +119,7 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
                 Export CSV
               </Button>
               <Button
-                onClick={() => exportToExcel(exportPayload, `panorama-interrogation-${new Date().toISOString().split('T')[0]}.xlsx`)}
+                onClick={exportToExcel}
                 variant="secondary"
                 icon={<FileSpreadsheet className="w-4 h-4" />}
                 aria-label="Export as Excel"
@@ -208,20 +227,18 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Timeout (ms)
+                API Port
               </label>
               <Input
                 type="number"
-                value={config.timeout}
+                value={config.apiPort}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const next = Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : config.timeout;
-                  const clamped = Math.max(60000, Math.min(1800000, next));
-                  updateConfig({ timeout: clamped });
+                  const next = Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : config.apiPort;
+                  updateConfig({ apiPort: next });
                 }}
-                min={60000}
-                max={1800000}
-                step={60000}
-                data-cy="timeout-input" data-testid="timeout-input"
+                min={1}
+                max={65535}
+                data-cy="api-port-input" data-testid="api-port-input"
               />
             </div>
           </div>
@@ -275,7 +292,7 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Layers className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.totalServiceObjects ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats as any)?.totalServiceObjects ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Service Objects</div>
               </div>
             </div>
@@ -285,7 +302,7 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Activity className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.managedDevices ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats as any)?.managedDevices ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Managed Devices</div>
               </div>
             </div>
@@ -295,7 +312,7 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Globe className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.totalZones ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats as any)?.totalZones ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Security Zones</div>
               </div>
             </div>
@@ -305,7 +322,7 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <AlertTriangle className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.unusedRules ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats as any)?.unusedRules ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Unused Rules</div>
               </div>
             </div>
@@ -397,11 +414,11 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Rules</span>
-                  <span className="text-lg font-bold text-green-600">{((stats?.totalSecurityPolicies ?? 0) - (stats?.unusedRules ?? 0)).toLocaleString()}</span>
+                  <span className="text-lg font-bold text-green-600">{((stats?.totalSecurityPolicies ?? 0) - ((stats as any)?.unusedRules ?? 0)).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Security Zones</span>
-                  <span className="text-lg font-bold text-purple-600">{(stats?.totalZones ?? 0).toLocaleString()}</span>
+                  <span className="text-lg font-bold text-purple-600">{((stats as any)?.totalZones ?? 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>

@@ -62,9 +62,9 @@ export const AzureAutomationDiscoveredView: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg">
             <Zap size={28} />
@@ -81,7 +81,7 @@ export const AzureAutomationDiscoveredView: React.FC = () => {
       </div>
 
       {/* Statistics Cards Grid (3 rows × 4 columns = 12 cards) */}
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
         {/* Row 1 - Discovery Success FIRST */}
         <DiscoverySuccessCard
           percentage={stats?.discoverySuccessPercentage ?? 0}
@@ -162,7 +162,7 @@ export const AzureAutomationDiscoveredView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex gap-2">
           <TabButton
             active={activeTab === 'overview'}
@@ -180,15 +180,15 @@ export const AzureAutomationDiscoveredView: React.FC = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {activeTab === 'overview' && stats && (
           <OverviewTab stats={stats} />
         )}
 
         {activeTab === 'accounts' && (
-          <div className="h-full flex flex-col p-6">
+          <div className="flex flex-col p-6">
             {/* Search and Export */}
-            <div className="flex gap-4 mb-4">
+            <div className="flex gap-4 mb-4 flex-shrink-0">
               <input
                 type="text"
                 value={searchText}
@@ -205,14 +205,12 @@ export const AzureAutomationDiscoveredView: React.FC = () => {
             </div>
 
             {/* Data Grid */}
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ minHeight: '600px' }}>
               <VirtualizedDataGrid
                 data={filteredData}
                 columns={columns}
                 enableFiltering={true}
                 enableColumnResize={true}
-                enableSorting={true}
-                csvFileName="azure-automation-accounts.csv"
               />
             </div>
           </div>
