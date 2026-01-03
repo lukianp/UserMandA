@@ -1516,7 +1516,7 @@ const SetupInstallersView: React.FC = () => {
 
   return (
     <div
-      className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950"
+      className="min-h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950"
       data-cy="setup-prerequisites-view"
       data-testid="setup-prerequisites-view"
     >

@@ -25,7 +25,7 @@ const ReportsView: React.FC = () => {
   } = useReportsLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="reports-view" data-testid="reports-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="reports-view" data-testid="reports-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center gap-3">

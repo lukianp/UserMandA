@@ -18,7 +18,7 @@ export const ConsolidatedApplicationsView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       <InventoryList
         entityType="APPLICATION"
         sourceProfileId="current" // TODO: Get from profile store

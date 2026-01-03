@@ -15,7 +15,7 @@ const MigrationExecutionView: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col" data-cy="execution-view" data-testid="execution-view">
+    <div className="min-h-full flex flex-col" data-cy="execution-view" data-testid="execution-view">
       <div className="flex items-center justify-between p-4 border-b bg-white dark:bg-gray-900">
         <div>
           <h1 className="text-2xl font-bold">Migration Execution</h1>

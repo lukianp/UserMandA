@@ -8,7 +8,7 @@ const MigrationValidationView: React.FC = () => {
   const logic = useMigrationValidationLogic();
 
   return (
-    <div className="h-full flex flex-col" data-cy="validation-view" data-testid="validation-view">
+    <div className="min-h-full flex flex-col" data-cy="validation-view" data-testid="validation-view">
       <div className="flex items-center justify-between p-4 border-b bg-white dark:bg-gray-900">
         <div><h1 className="text-2xl font-bold">Pre-Migration Validation</h1></div>
         <div className="flex gap-2">

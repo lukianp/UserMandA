@@ -32,7 +32,7 @@ const ComputerInventoryView: React.FC = () => {
   } = useComputerInventoryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="computer-inventory-view" data-testid="computer-inventory-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="computer-inventory-view" data-testid="computer-inventory-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -197,13 +197,13 @@ const ComputerInventoryView: React.FC = () => {
       )}
 
       {/* Data Grid */}
-      <div className="flex-1 overflow-hidden p-6">
+      <div className="flex-1 overflow-auto p-6">
         <VirtualizedDataGrid
           data={data}
           columns={columns}
           loading={isLoading}
           enableSelection={true}
-          selectionMode="multiple"
+          selectionMode="multiRow"
           onSelectionChange={setSelectedComputers}
           height="calc(100vh - 450px)"
          

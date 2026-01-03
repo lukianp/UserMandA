@@ -294,7 +294,7 @@ export const MigrationMonitorView: React.FC = () => {
   const etaDate = new Date(Date.now() + metrics.estimatedTimeRemaining * 60000);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4">
@@ -350,7 +350,7 @@ export const MigrationMonitorView: React.FC = () => {
             value={`${metrics.itemsPerMinute}/min`}
             trend="up"
             trendValue="+12%"
-            icon={Zap}
+            icon={Zap as any}
             colorClass="bg-gradient-to-br from-yellow-500 to-yellow-600"
           />
           <MetricCard
@@ -358,20 +358,20 @@ export const MigrationMonitorView: React.FC = () => {
             value={`${metrics.errorRate}%`}
             trend="down"
             trendValue="-0.5%"
-            icon={AlertCircle}
+            icon={AlertCircle as any}
             colorClass="bg-gradient-to-br from-red-500 to-red-600"
           />
           <MetricCard
             label="ETA"
             value={`${metrics.estimatedTimeRemaining} min`}
-            icon={Clock}
+            icon={Clock as any}
             colorClass="bg-gradient-to-br from-purple-500 to-purple-600"
           />
           <MetricCard
             label="Network"
             value={`${metrics.networkThroughput} Mbps`}
             trend="stable"
-            icon={Wifi}
+            icon={Wifi as any}
             colorClass="bg-gradient-to-br from-blue-500 to-blue-600"
           />
         </div>

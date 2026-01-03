@@ -30,7 +30,7 @@ const ThreatAnalysisView: React.FC = () => {
   } = useThreatAnalysisLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="threat-analysis-view" data-testid="threat-analysis-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="threat-analysis-view" data-testid="threat-analysis-view">
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -121,8 +121,8 @@ const ThreatAnalysisView: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden p-6">
-        <VirtualizedDataGrid data={data} columns={columns} loading={isLoading} enableSelection={true} selectionMode="multiple" onSelectionChange={setSelectedThreats} height="calc(100vh - 450px)" />
+      <div className="flex-1 overflow-auto p-6">
+        <VirtualizedDataGrid data={data} columns={columns} loading={isLoading} enableSelection={true} selectionMode="multiRow" onSelectionChange={setSelectedThreats} height="calc(100vh - 450px)" />
       </div>
     </div>
   );

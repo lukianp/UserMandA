@@ -193,7 +193,7 @@ const NetworkInfrastructureView: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="min-h-full flex flex-col p-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">

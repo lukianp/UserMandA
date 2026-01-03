@@ -26,6 +26,7 @@ import { Spinner } from '../../components/atoms/Spinner';
 import { useProfileStore } from '../../store/useProfileStore';
 import { DiscoveryProgressTile } from '../../components/molecules/DiscoveryProgressTile';
 import { SecurityAlertsTile } from '../../components/molecules/SecurityAlertsTile';
+import { EnvironmentDetectionTile } from '../../components/molecules/EnvironmentDetectionTile';
 import { useLicense } from '../../hooks/useLicense';
 import { useUpdates } from '../../hooks/useUpdates';
 
@@ -53,6 +54,7 @@ const AVAILABLE_TILES: DashboardTile[] = [
   { id: 'quickactions', title: 'Quick Actions', defaultSize: { w: 4, h: 2 }, minSize: { w: 3, h: 2 } },
   { id: 'discovery', title: 'Discovery Progress', defaultSize: { w: 6, h: 3 }, minSize: { w: 4, h: 2 } },
   { id: 'security', title: 'Security Alerts', defaultSize: { w: 6, h: 3 }, minSize: { w: 4, h: 2 } },
+  { id: 'environment', title: 'Environment Detection', defaultSize: { w: 6, h: 3 }, minSize: { w: 4, h: 2 }, compulsory: true },
 ];
 
 // Default layouts
@@ -66,10 +68,11 @@ const DEFAULT_LAYOUTS = {
     { i: 'activity', x: 0, y: 4, w: 8, h: 4, minW: 4, minH: 3 },
     { i: 'health', x: 8, y: 4, w: 4, h: 2, minW: 3, minH: 2 },
     { i: 'quickactions', x: 8, y: 6, w: 4, h: 2, minW: 3, minH: 2 },
+    { i: 'environment', x: 0, y: 8, w: 6, h: 3, minW: 4, minH: 2 },
   ],
 };
 
-const DEFAULT_ACTIVE_TILES = ['timeline', 'users', 'groups', 'computers', 'infrastructure', 'activity', 'health', 'quickactions'];
+const DEFAULT_ACTIVE_TILES = ['timeline', 'users', 'groups', 'computers', 'infrastructure', 'activity', 'health', 'quickactions', 'environment'];
 
 /**
  * OverviewView Component with Draggable Tiles
@@ -169,6 +172,8 @@ const OverviewView: React.FC = () => {
         return <DiscoveryProgressTile />;
       case 'security':
         return <SecurityAlertsTile />;
+      case 'environment':
+        return <EnvironmentDetectionTile />;
       default:
         return null;
     }
@@ -461,14 +466,19 @@ const OverviewView: React.FC = () => {
                         <div className="flex items-center gap-2 tile-drag-handle cursor-move">
                           <GripVertical className="w-4 h-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors" />
                           <span className="text-sm font-medium text-[var(--text-secondary)] select-none">{tile.title}</span>
+                          {tile.compulsory && (
+                            <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full">Required</span>
+                          )}
                         </div>
-                        <button
-                          onClick={() => removeTile(tileId)}
-                          className="p-1 hover:bg-[var(--bg-primary)] rounded text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors"
-                          disabled={isDragging}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        {!tile.compulsory && (
+                          <button
+                            onClick={() => removeTile(tileId)}
+                            className="p-1 hover:bg-[var(--bg-primary)] rounded text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors"
+                            disabled={isDragging}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     ) : null}
                     {/* Tile Content - full height when not editing (no header) */}

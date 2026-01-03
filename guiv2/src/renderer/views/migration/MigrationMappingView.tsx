@@ -12,7 +12,7 @@ const MigrationMappingView: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="h-full flex flex-col" data-cy="migration-mapping-view" data-testid="migration-mapping-view">
+    <div className="min-h-full flex flex-col" data-cy="migration-mapping-view" data-testid="migration-mapping-view">
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Resource Mapping</h1>

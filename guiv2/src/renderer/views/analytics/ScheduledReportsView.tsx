@@ -310,7 +310,7 @@ const ScheduledReportsView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50" data-cy="scheduled-reports-view" data-testid="scheduled-reports-view">
+    <div className="min-h-full flex flex-col bg-gray-50" data-cy="scheduled-reports-view" data-testid="scheduled-reports-view">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">

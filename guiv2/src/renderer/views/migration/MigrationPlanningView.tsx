@@ -414,7 +414,7 @@ const MigrationPlanningView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col" data-cy="migration-planning-view" data-testid="migration-planning-view">
+    <div className="min-h-full flex flex-col" data-cy="migration-planning-view" data-testid="migration-planning-view">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div>

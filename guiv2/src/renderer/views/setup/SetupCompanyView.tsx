@@ -1478,7 +1478,7 @@ const SetupCompanyView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950" data-cy="setup-company-view" data-testid="setup-company-view">
+    <div className="min-h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950" data-cy="setup-company-view" data-testid="setup-company-view">
       {/* Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={showConfirmation}

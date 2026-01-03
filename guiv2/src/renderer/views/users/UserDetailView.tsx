@@ -579,7 +579,7 @@ const GposTab: React.FC<{ gpoLinks: GpoData[]; gpoFilters: GpoData[] }> = React.
     );
 
     return (
-      <div className="h-full flex flex-col gap-4">
+      <div className="min-h-full flex flex-col gap-4">
         <div className="flex-1">
           <h3 className="text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100">GPO Links</h3>
           {gpoLinks.length === 0 ? (
@@ -787,7 +787,7 @@ const SqlRisksTab: React.FC<{ sqlDatabases: SqlDatabaseData[]; risks: RiskItem[]
     );
 
     return (
-      <div className="h-full flex flex-col gap-4">
+      <div className="min-h-full flex flex-col gap-4">
         <div className="flex-1">
           <h3 className="text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100">SQL Databases</h3>
           {sqlDatabases.length === 0 ? (

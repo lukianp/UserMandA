@@ -78,7 +78,7 @@ const UsersView: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div className="h-full flex flex-col p-6" data-cy="users-view" data-testid="users-view">
+    <div className="min-h-full flex flex-col p-6" data-cy="users-view" data-testid="users-view">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Users</h1>
