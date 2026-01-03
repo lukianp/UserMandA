@@ -30,6 +30,8 @@ interface EnvironmentDetectionState {
   config: EnvironmentDetectionConfig;
   result: EnvironmentDetectionResult | null;
   isDiscovering: boolean;
+  isCancelling: boolean;
+  showExecutionDialog: boolean;
   progress: {
     current: number;
     total: number;
@@ -37,6 +39,8 @@ interface EnvironmentDetectionState {
     percentage: number;
   };
   error: string | null;
+  errors: string[];
+  logs: string[];
 }
 
 interface EnvironmentDetectionHookResult {
@@ -44,6 +48,8 @@ interface EnvironmentDetectionHookResult {
   result: EnvironmentDetectionResult | null;
   isDiscovering: boolean;
   isDetecting: boolean;
+  isCancelling: boolean;
+  showExecutionDialog: boolean;
   progress: {
     current: number;
     total: number;
@@ -51,6 +57,8 @@ interface EnvironmentDetectionHookResult {
     percentage: number;
   };
   error: string | null;
+  errors: string[];
+  logs: string[];
   activeTab: string;
   filter: any;
   columns: any[];
@@ -63,9 +71,11 @@ interface EnvironmentDetectionHookResult {
   updateConfig: (updates: Partial<EnvironmentDetectionConfig>) => void;
   updateFilter: (updates: any) => void;
   setActiveTab: (tab: string) => void;
+  setShowExecutionDialog: (show: boolean) => void;
   exportToCSV: (data: any[], filename: string) => Promise<void>;
   exportToExcel: (data: any[], filename: string) => Promise<void>;
   clearError: () => void;
+  clearLogs: () => void;
 }
 
 export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHookResult => {
@@ -91,6 +101,8 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
     },
     result: null,
     isDiscovering: false,
+    isCancelling: false,
+    showExecutionDialog: false,
     progress: {
       current: 0,
       total: 100,
@@ -98,6 +110,8 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
       percentage: 0,
     },
     error: null,
+    errors: [],
+    logs: [],
   });
 
   // Load previous results on mount
@@ -123,6 +137,7 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
         console.log('[EnvironmentDetectionHook] Discovery output:', data.message);
         setState((prev) => ({
           ...prev,
+          logs: [...prev.logs, data.message || ''],
           progress: {
             ...prev.progress,
             message: data.message || '',
@@ -176,6 +191,8 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
           ...prev,
           isDiscovering: false,
           error: data.error,
+          errors: [...prev.errors, data.error],
+          logs: [...prev.logs, `ERROR: ${data.error}`],
           progress: {
             current: 0,
             total: 100,
@@ -225,7 +242,11 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
     setState((prev) => ({
       ...prev,
       isDiscovering: true,
+      isCancelling: false,
+      showExecutionDialog: true,
       error: null,
+      errors: [],
+      logs: [],
       progress: {
         current: 0,
         total: 100,
@@ -286,6 +307,8 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
 
     console.warn('[EnvironmentDetectionHook] Cancelling discovery...');
 
+    setState((prev) => ({ ...prev, isCancelling: true }));
+
     try {
       await window.electron.cancelDiscovery(currentTokenRef.current);
       console.log('[EnvironmentDetectionHook] Discovery cancellation requested successfully');
@@ -294,6 +317,7 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
@@ -309,6 +333,7 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
       setState((prev) => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: {
           current: 0,
           total: 100,
@@ -329,6 +354,14 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
 
   const clearError = useCallback(() => {
     setState((prev) => ({ ...prev, error: null }));
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setState((prev) => ({ ...prev, logs: [], errors: [] }));
+  }, []);
+
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState((prev) => ({ ...prev, showExecutionDialog: show }));
   }, []);
 
   // Additional functions for view compatibility
@@ -387,8 +420,12 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
     result: state.result,
     isDiscovering: state.isDiscovering,
     isDetecting: state.isDiscovering,
+    isCancelling: state.isCancelling,
+    showExecutionDialog: state.showExecutionDialog,
     progress: state.progress,
     error: state.error,
+    errors: state.errors,
+    logs: state.logs,
     activeTab,
     filter,
     columns,
@@ -401,9 +438,11 @@ export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHoo
     updateConfig,
     updateFilter,
     setActiveTab,
+    setShowExecutionDialog,
     exportToCSV,
     exportToExcel,
     clearError,
+    clearLogs,
   };
 };
 

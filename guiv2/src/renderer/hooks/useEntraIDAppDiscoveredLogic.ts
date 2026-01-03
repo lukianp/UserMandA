@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
+import { ColDef } from 'ag-grid-community';
 import { useProfileStore } from '../store/useProfileStore';
 
 // TypeScript interfaces matching CSV structures
@@ -360,8 +361,64 @@ export function useEntraIDAppDiscoveredLogic() {
     };
   }, [appRegistrations, enterpriseApps, servicePrincipals, applicationSecrets]);
 
+  // Column definitions for each tab
+  const columns = useMemo<ColDef[]>(() => {
+    switch (activeTab) {
+      case 'app-registrations':
+        return [
+          { field: 'DisplayName', headerName: 'Application Name', width: 250 },
+          { field: 'AppId', headerName: 'App ID', width: 200 },
+          { field: 'SignInAudience', headerName: 'Sign-In Audience', width: 180 },
+          { field: 'PublisherDomain', headerName: 'Publisher Domain', width: 200 },
+          { field: 'OwnerCount', headerName: 'Owners', width: 100, type: 'numericColumn' },
+          { field: 'RequiredPermissionCount', headerName: 'Permissions', width: 120, type: 'numericColumn' },
+          { field: 'AppRoleCount', headerName: 'App Roles', width: 110, type: 'numericColumn' },
+          { field: 'KeyCredentialCount', headerName: 'Certificates', width: 120, type: 'numericColumn' },
+          { field: 'PasswordCredentialCount', headerName: 'Secrets', width: 110, type: 'numericColumn' },
+          { field: 'CreatedDateTime', headerName: 'Created', width: 180 },
+        ];
+      case 'enterprise-apps':
+        return [
+          { field: 'DisplayName', headerName: 'Application Name', width: 250 },
+          { field: 'AppId', headerName: 'App ID', width: 200 },
+          { field: 'ServicePrincipalType', headerName: 'Type', width: 150 },
+          { field: 'AccountEnabled', headerName: 'Enabled', width: 100 },
+          { field: 'PublisherName', headerName: 'Publisher', width: 200 },
+          { field: 'PreferredSingleSignOnMode', headerName: 'SSO Mode', width: 150 },
+          { field: 'AppRoleAssignmentRequired', headerName: 'Assignment Required', width: 180 },
+          { field: 'AppRoleCount', headerName: 'App Roles', width: 110, type: 'numericColumn' },
+          { field: 'CreatedDateTime', headerName: 'Created', width: 180 },
+        ];
+      case 'service-principals':
+        return [
+          { field: 'DisplayName', headerName: 'Display Name', width: 250 },
+          { field: 'AppId', headerName: 'App ID', width: 200 },
+          { field: 'ServicePrincipalType', headerName: 'Type', width: 150 },
+          { field: 'AccountEnabled', headerName: 'Enabled', width: 100 },
+          { field: 'PublisherName', headerName: 'Publisher', width: 200 },
+          { field: 'SignInAudience', headerName: 'Sign-In Audience', width: 180 },
+          { field: 'AppRoleCount', headerName: 'App Roles', width: 110, type: 'numericColumn' },
+          { field: 'KeyCredentialCount', headerName: 'Certificates', width: 120, type: 'numericColumn' },
+          { field: 'CreatedDateTime', headerName: 'Created', width: 180 },
+        ];
+      case 'secrets':
+        return [
+          { field: 'AppDisplayName', headerName: 'Application', width: 250 },
+          { field: 'AppId', headerName: 'App ID', width: 200 },
+          { field: 'CredentialType', headerName: 'Type', width: 120 },
+          { field: 'DisplayName', headerName: 'Secret Name', width: 200 },
+          { field: 'StartDateTime', headerName: 'Start Date', width: 180 },
+          { field: 'EndDateTime', headerName: 'End Date', width: 180 },
+          { field: 'DaysUntilExpiry', headerName: 'Days Until Expiry', width: 150, type: 'numericColumn' },
+          { field: 'Status', headerName: 'Status', width: 120 },
+        ];
+      default:
+        return [];
+    }
+  }, [activeTab]);
+
   // Filtered data based on active tab and search
-  const filteredData = useMemo(() => {
+  const filteredData: any[] = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
 
     switch (activeTab) {
@@ -458,6 +515,7 @@ export function useEntraIDAppDiscoveredLogic() {
     applicationSecrets,
     filteredData,
     statistics,
+    columns,
 
     // Actions
     exportToCSV,
