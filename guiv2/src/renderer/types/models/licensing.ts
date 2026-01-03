@@ -130,6 +130,11 @@ export interface LicenseStats {
  * Enhanced license statistics with user-centric metrics
  */
 export interface EnhancedLicenseStats extends LicenseStats {
+  // Discovery Success metrics
+  discoverySuccessPercentage: number;
+  dataSourcesReceivedCount: number;
+  dataSourcesTotal: number;
+
   // User-centric metrics
   totalLicensedUsers: number;
   avgLicensesPerUser: number;
