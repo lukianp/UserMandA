@@ -294,21 +294,122 @@ return { activeTab, setActiveTab, searchTerm, setSearchTerm, loading, error, sta
 ### 12. Build/Update Discovered View
 Update `guiv2/src/renderer/views/discovered/<ModuleName>DiscoveredView.tsx`:
 
-**MANDATORY: Discovery Success % Card (FIRST card, prominent position):**
+**NEW LAYOUT PATTERN (Intune-style):**
 
-Every enriched view MUST include a Discovery Success % card that shows:
-- Percentage of expected data sources that returned data (0-100%)
-- Visual indicator (green 80%+, yellow 60-79%, orange 40-59%, red <40%)
-- Tooltip showing received/total data sources
+All enriched views MUST use the Intune-style layout with tabs at the top, maximizing screen real estate for data grids.
+
+**Layout Structure:**
+```tsx
+<div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+  {/* 1. Header (flex-shrink-0) */}
+  <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+    <div className="flex items-center gap-4">
+      <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+        <ModuleIcon size={28} />
+      </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{summary}</p>
+      </div>
+    </div>
+    <div className="flex gap-2">
+      <Button onClick={refresh} variant="secondary" icon={<RefreshCw />}>Refresh</Button>
+      {activeTab !== 'overview' && <Button onClick={exportCSV} icon={<Download />}>Export CSV</Button>}
+    </div>
+  </div>
+
+  {/* 2. Error Display (optional, if error exists) */}
+  {error && (
+    <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+      <span className="text-red-800 dark:text-red-200">{error}</span>
+    </div>
+  )}
+
+  {/* 3. Tabs - IMMEDIATELY AFTER HEADER (flex-shrink-0) */}
+  <div className="px-6 pt-4 flex-shrink-0">
+    <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
+      {tabs.map(tab => (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id)}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+            activeTab === tab.id
+              ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-b-2 border-blue-600'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          <tab.icon size={16} />
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* 4. Search Bar (only for data tabs, NOT overview) - (flex-shrink-0) */}
+  {activeTab !== 'overview' && (
+    <div className="px-6 py-4 flex-shrink-0">
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search..." className="pl-10" />
+      </div>
+    </div>
+  )}
+
+  {/* 5. Content Area (flex-1 overflow-y-auto min-h-0) */}
+  <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
+    {/* Overview Tab */}
+    {activeTab === 'overview' && (
+      <div className="space-y-6 pt-4">
+        {/* Statistics Cards - Row 1 */}
+        <div className="grid grid-cols-4 gap-4">
+          <DiscoverySuccessCard percentage={stats.discoverySuccessPercentage} received={stats.dataSourcesReceivedCount} total={stats.dataSourcesTotal} showAnimation={true} />
+          <StatCard ... />
+          <StatCard ... />
+          <StatCard ... />
+        </div>
+        {/* Row 2, Row 3 */}
+
+        {/* Breakdown Panels (2×2 grid) */}
+        <div className="grid grid-cols-2 gap-6">
+          <BreakdownPanel ... />
+          <BreakdownPanel ... />
+          <BreakdownPanel ... />
+          <BreakdownPanel ... />
+        </div>
+      </div>
+    )}
+
+    {/* Data Tabs - Use calc height for VirtualizedDataGrid */}
+    {activeTab === 'devices' && (
+      <div className="h-[calc(100vh-320px)]">
+        <VirtualizedDataGrid data={devices} columns={deviceColumns} />
+      </div>
+    )}
+  </div>
+</div>
+```
+
+**CRITICAL LAYOUT PRINCIPLES:**
+
+1. **Tabs at Top** (NOT bottom) - Immediately after header, before content
+2. **No Search on Overview** - Search bar only appears for data tabs
+3. **Overview = Stats + Panels** - Statistics cards in 3×4 grid, then breakdown panels in 2×2 grid
+4. **Data Tabs = Maximum Grid Space** - Use `h-[calc(100vh-320px)]` for VirtualizedDataGrid container
+5. **Scrolling Pattern** - Content area uses `flex-1 overflow-y-auto min-h-0`, headers/tabs use `flex-shrink-0`
+
+**MANDATORY: Discovery Success % Card (FIRST card in statistics grid):**
+
+Use the standardized DiscoverySuccessCard component:
 
 ```typescript
-// Calculate in logic hook - weighted by importance
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
+
+// In logic hook statistics:
 discoverySuccessPercentage: (() => {
   const expectedSources = [
     { name: 'PrimaryData1', hasData: data1.length > 0, weight: 20 },
     { name: 'PrimaryData2', hasData: data2.length > 0, weight: 15 },
-    { name: 'SecondaryData1', hasData: data3.length > 0, weight: 10 },
-    // ... add all expected CSV files with appropriate weights
+    // ... weighted by importance (total = 100)
   ];
   const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
   const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
@@ -316,44 +417,23 @@ discoverySuccessPercentage: (() => {
 })(),
 dataSourcesReceivedCount: expectedSources.filter(s => s.hasData).length,
 dataSourcesTotal: expectedSources.length,
-dataSourcesReceived: expectedSources.filter(s => s.hasData).map(s => s.name),
 
-// DiscoverySuccessCard component (add to both Discovery and Discovered views)
-const DiscoverySuccessCard: React.FC<{percentage: number; received: number; total: number}> = ({ percentage, received, total }) => {
-  const getGradient = () => {
-    if (percentage >= 80) return 'from-green-500 to-emerald-600';
-    if (percentage >= 60) return 'from-yellow-500 to-amber-600';
-    if (percentage >= 40) return 'from-orange-500 to-orange-600';
-    return 'from-red-500 to-rose-600';
-  };
-  const getIcon = () => {
-    if (percentage >= 80) return CheckCircle2;
-    if (percentage >= 60) return AlertTriangle;
-    return XCircle;
-  };
-  const Icon = getIcon();
-  return (
-    <div className={`bg-gradient-to-br ${getGradient()} rounded-xl p-4 text-white shadow-lg`}>
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-white/20 rounded-lg"><Icon size={24} /></div>
-        <div>
-          <p className="text-xs opacity-80">Discovery Success</p>
-          <p className="text-2xl font-bold">{percentage}%</p>
-          <p className="text-xs opacity-80">{received}/{total} data sources</p>
-        </div>
-      </div>
-    </div>
-  );
-};
+// In view JSX:
+<DiscoverySuccessCard
+  percentage={statistics.discoverySuccessPercentage}
+  received={statistics.dataSourcesReceivedCount}
+  total={statistics.dataSourcesTotal}
+  showAnimation={true}
+/>
 ```
 
 **12 Statistics Cards (3 rows × 4 columns):**
 ```typescript
 // Row 1: Discovery Success FIRST, then primary metrics
-<DiscoverySuccessCard percentage={stats.discoverySuccessPercentage} received={stats.dataSourcesReceivedCount} total={stats.dataSourcesTotal} />
-<StatCard icon={Icon1} label="Total X" value={stats.total} gradient="from-blue-500 to-blue-600" />
-<StatCard icon={Icon2} label="Total Y" value={stats.count} gradient="from-green-500 to-green-600" />
-<StatCard icon={Icon3} label="Total Z" value={stats.items} gradient="from-purple-500 to-purple-600" />
+<DiscoverySuccessCard ... />
+<StatCard ... gradient="from-sky-500 to-sky-600" />
+<StatCard ... gradient="from-green-500 to-green-600" />
+<StatCard ... gradient="from-purple-500 to-purple-600" />
 
 // Row 2: Status/health metrics
 <StatCard ... gradient="from-indigo-500 to-indigo-600" />
@@ -368,19 +448,29 @@ const DiscoverySuccessCard: React.FC<{percentage: number; received: number; tota
 <StatCard ... gradient="from-pink-500 to-pink-600" />
 ```
 
-**Tabs:**
-- Overview tab
-- Data type tabs (one per CSV file)
-
-**Overview Tab:**
-- Breakdown panels (4 panels, 2x2 grid)
-- Each panel: title, icon, list of items with progress bars
-- Show distributions, top items, status breakdowns
-
-**Data Tabs:**
-- Search input
-- Export CSV button
-- VirtualizedDataGrid with all columns
+**Breakdown Panels (2×2 grid in Overview tab):**
+```typescript
+<div className="grid grid-cols-2 gap-6">
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
+    <div className="space-y-3">
+      {items.map((item, idx) => (
+        <div key={idx} className="flex items-center gap-3">
+          <div className="flex-1">
+            <div className="flex justify-between mb-1">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">{item.count}</span>
+            </div>
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full" style={{ width: `${item.percentage}%` }} />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+```
 
 ### 13. Update Discovery View Results
 Update `guiv2/src/renderer/views/discovery/<ModuleName>DiscoveryView.tsx`:

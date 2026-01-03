@@ -221,7 +221,13 @@
       "Bash(cmd /c \"dir C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*SharePoint*.csv 2>&1\")",
       "Bash(cmd /c \"dir C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\hooks\\\\useSharePoint*.ts 2>&1\")",
       "Bash(cmd /c \"dir C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\*SharePoint*.tsx 2>&1\")",
-      "Bash(cmd /c:*)"
+      "Bash(cmd /c:*)",
+      "Bash(git -C \"D:\\\\Scripts\\\\UserMandA-1\" diff guiv2/src/renderer/hooks/useActiveDirectoryDiscoveredLogic.ts)",
+      "Bash(git -C \"D:\\\\Scripts\\\\UserMandA-1\" checkout guiv2/src/renderer/hooks/useActiveDirectoryDiscoveredLogic.ts)",
+      "Bash(git -C \"D:\\\\Scripts\\\\UserMandA-1\" checkout guiv2/src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx)",
+      "Bash(git -C \"D:\\\\Scripts\\\\UserMandA-1\" status --short guiv2/src/renderer/views/discovered/)",
+      "Bash(python3:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

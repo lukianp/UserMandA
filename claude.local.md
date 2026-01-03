@@ -56,6 +56,117 @@ Copy-Item -Path 'D:\Scripts\UserMandA\guiv2\...\MyFile.tsx' -Destination 'C:\ent
 2. Robocopy is still useful for initial full sync, but don't rely on it for incremental updates
 3. Always verify deployment file has your changes before rebuilding
 
+## DPAPI Credential Decryption Pattern
+
+**CRITICAL**: Azure credentials stored in `C:\DiscoveryData\{ProfileName}\Credentials\discoverycredentials.config` are encrypted using Windows DPAPI (Data Protection API) and stored as Base64-encoded encrypted data.
+
+**Common Mistake**: Trying to parse the file directly as JSON will fail with error:
+```
+Invalid JSON primitive: 01000000d08c9ddf0115d1118c7a00c04fc297eb...
+```
+
+**Correct Pattern** (used by all Azure discovery modules):
+
+```powershell
+# Read and decrypt DPAPI-encrypted credentials
+Add-Type -AssemblyName System.Security
+$encryptedContent = Get-Content $credPath -Raw
+
+# Strip BOM (Byte Order Mark) if present
+if ($encryptedContent[0] -eq [char]0xFEFF) {
+    $encryptedContent = $encryptedContent.Substring(1)
+}
+$encryptedContent = $encryptedContent.Trim()
+
+# Convert Base64 to bytes and decrypt using DPAPI
+$encryptedBytes = [Convert]::FromBase64String($encryptedContent)
+$decryptedBytes = [System.Security.Cryptography.ProtectedData]::Unprotect(
+    $encryptedBytes,
+    $null,
+    [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+)
+
+# Convert decrypted bytes to string (try Unicode first, then UTF-8)
+$decryptedJson = $null
+try {
+    # Try Unicode (UTF-16) first - PowerShell default
+    $decryptedJson = [System.Text.Encoding]::Unicode.GetString($decryptedBytes)
+    $credContent = $decryptedJson | ConvertFrom-Json
+} catch {
+    # Fallback to UTF-8 if Unicode fails
+    $decryptedJson = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+    $credContent = $decryptedJson | ConvertFrom-Json
+}
+
+# Access credential fields (note: capitalized property names)
+$tenantId = $credContent.TenantId      # NOT .tenantId
+$clientId = $credContent.ClientId      # NOT .clientId
+$clientSecret = $credContent.ClientSecret  # NOT .clientSecret
+```
+
+**Reference Files**:
+- `guiv2/read-credentials.ps1` - Standalone decryption script
+- `guiv2/src/main/services/credentialService.ts` - TypeScript service with multiple decryption strategies
+- `Modules/Discovery/EnvironmentDetectionDiscovery.psm1` - PowerShell module example (Get-AzureConnectivityStatus function)
+
+**Why This Pattern**:
+1. **Hex OR Base64 Encoding**: DPAPI encrypted data is binary, stored as hex string OR Base64 string in file
+2. **DPAPI Decryption**: Windows DPAPI provides user-scoped encryption (CurrentUser scope)
+3. **UTF-16 Encoding (CRITICAL)**: Decrypted bytes are **UTF-16 (Unicode) encoded**, NOT UTF-8
+   - PowerShell stores JSON as UTF-16 by default
+   - Must try `[System.Text.Encoding]::Unicode.GetString()` BEFORE UTF-8
+   - Symptoms if using UTF-8: null bytes between characters (`\x00m\x00e\x00n\x00t`)
+4. **Capitalized Properties**: Credential files use Pascal case (TenantId, not tenantId)
+
+**DO NOT**:
+- ❌ `Get-Content $path | ConvertFrom-Json` (tries to parse encrypted data as JSON)
+- ❌ `ConvertTo-SecureString` without proper decryption (wrong approach for this file format)
+
+**DO**:
+- ✅ Use the exact pattern above (Base64 → DPAPI decrypt → UTF8 → JSON)
+- ✅ Check for BOM before decryption
+- ✅ Use capitalized property names when accessing credentials
+
+## OAuth2 Token Request Pattern
+
+**CRITICAL**: When making OAuth2 token requests with `Invoke-RestMethod`, pass the body as a **hashtable WITHOUT ContentType**. PowerShell will auto-convert to `application/x-www-form-urlencoded`.
+
+**Common Mistake**: Specifying `-ContentType "application/x-www-form-urlencoded"` when body is a hashtable causes "Invalid JSON primitive" errors.
+
+**Correct Pattern**:
+```powershell
+# OAuth2 client credentials flow
+$tokenBody = @{
+    client_id     = $clientId
+    scope         = "https://graph.microsoft.com/.default"
+    client_secret = $clientSecret
+    grant_type    = "client_credentials"
+}
+
+# ✅ CORRECT: No ContentType parameter - PowerShell auto-converts hashtable
+$tokenResponse = Invoke-RestMethod -Uri $tokenUrl -Method POST -Body $tokenBody
+
+# Extract access token
+$accessToken = $tokenResponse.access_token
+```
+
+**Why This Works**:
+- When Body is a hashtable and no ContentType is specified, PowerShell automatically:
+  1. Converts hashtable to URL-encoded string: `client_id=xxx&scope=yyy&...`
+  2. Sets `Content-Type: application/x-www-form-urlencoded` header
+  3. Parses JSON response automatically
+
+**DO NOT**:
+- ❌ `Invoke-RestMethod -Body $hashtable -ContentType "application/x-www-form-urlencoded"` (PowerShell won't convert hashtable)
+- ❌ Manually building URL-encoded string unless necessary
+
+**DO**:
+- ✅ Pass hashtable body WITHOUT ContentType parameter
+- ✅ Let PowerShell handle conversion automatically
+- ✅ Use same pattern across all Azure modules (Exchange, SharePoint, OneDrive, etc.)
+
+**Reference**: See `Modules/Discovery/ExchangeDiscovery.psm1` (Get-ExchangeAccessToken function, line 98)
+
 ## Discovery Data Nesting Pattern
 
 **CRITICAL**: PowerShell discovery results are nested THREE levels deep:
@@ -248,3 +359,111 @@ Row 3: `rose-500`, `violet-500`, `teal-500`, `pink-500`
 **Exchange Column Definitions**: Already using correct AG Grid ColDef format (`field`, `headerName`). The AG Grid warnings in console are from OTHER modules (EntraIDM365, Azure, Licensing, etc.) still using legacy `key`, `header` format - not from Exchange.
 
 **Important**: Mail flow cmdlets (Get-TransportRule, etc.) require Exchange Online PowerShell connection, not just Graph API. The `$exoConnected` variable must be true for mail flow discovery to run.
+
+---
+
+## Discovered & Discovery View Scrolling Pattern (MANDATORY)
+
+**CRITICAL**: ALL discovered views and discovery views MUST allow scrolling past the bottom of the window on ALL tabs. Many views have more content than fits on one screen.
+
+### Required Pattern for ALL Views
+
+Every discovered view and discovery view file must implement this exact scrolling pattern:
+
+```tsx
+return (
+  <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    {/* Header - MUST have flex-shrink-0 */}
+    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
+      {/* Header content */}
+    </div>
+
+    {/* Statistics Cards - MUST have flex-shrink-0 */}
+    <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
+      {/* Statistics cards */}
+    </div>
+
+    {/* Tabs - MUST have flex-shrink-0 */}
+    <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+      {/* Tabs */}
+    </div>
+
+    {/* Search/Actions (if present) - MUST have flex-shrink-0 */}
+    <div className="flex gap-4 mb-4 flex-shrink-0">
+      {/* Search and action buttons */}
+    </div>
+
+    {/* Content Area - MUST have overflow-y-auto and min-h-0 */}
+    <div className="flex-1 overflow-y-auto min-h-0">
+      {activeTab === 'overview' && (
+        <div className="p-6">
+          {/* Overview content - can scroll */}
+        </div>
+      )}
+
+      {activeTab === 'data' && (
+        <div className="p-6">
+          {/* Search bar - flex-shrink-0 if needed */}
+          <div className="flex gap-4 mb-4 flex-shrink-0">
+            <input ... />
+            <button ... />
+          </div>
+
+          {/* Data Grid - minHeight ensures scrollability */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ minHeight: '600px' }}>
+            <VirtualizedDataGrid ... />
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+);
+```
+
+### Key CSS Classes Breakdown
+
+| Element | Required Classes | Purpose |
+|---------|------------------|---------|
+| **Main container** | `h-screen flex flex-col overflow-hidden` | Full screen height, flex layout, prevent outer scroll |
+| **Header** | `flex-shrink-0` | Prevent header from shrinking when content overflows |
+| **Statistics cards** | `flex-shrink-0` | Keep cards at fixed size |
+| **Tabs** | `flex-shrink-0` | Keep tabs visible at top |
+| **Search/Actions** | `flex-shrink-0` | Keep action bar fixed |
+| **Content area** | `flex-1 overflow-y-auto min-h-0` | Take remaining space, enable vertical scroll, allow shrinking |
+| **Data grids** | `style={{ minHeight: '600px' }}` | Ensure grid has minimum height for scrolling |
+
+### Common Mistakes to Avoid
+
+❌ **WRONG**: Using `h-full` on main container (doesn't constrain height properly)
+❌ **WRONG**: Using `overflow-auto` instead of `overflow-y-auto` (can cause horizontal scroll issues)
+❌ **WRONG**: Using `h-full` on inner tab content containers (prevents scrolling)
+❌ **WRONG**: Missing `flex-shrink-0` on fixed elements (causes layout collapse)
+❌ **WRONG**: Missing `min-h-0` on content area (prevents flex item from shrinking)
+
+✅ **CORRECT**: Use `h-screen` on main container
+✅ **CORRECT**: Use `overflow-y-auto min-h-0` on scrollable content areas
+✅ **CORRECT**: Add `flex-shrink-0` to ALL fixed-height sections
+✅ **CORRECT**: Remove `h-full` from inner containers that should scroll
+✅ **CORRECT**: Add `minHeight` style to data grids to ensure scrollable content
+
+### Verification Checklist
+
+When creating or updating a discovered/discovery view, verify:
+
+- [ ] Main container uses `h-screen flex flex-col overflow-hidden`
+- [ ] Header has `flex-shrink-0`
+- [ ] Statistics cards section has `flex-shrink-0`
+- [ ] Tabs section has `flex-shrink-0`
+- [ ] Content area uses `flex-1 overflow-y-auto min-h-0`
+- [ ] No inner containers use `h-full` (use `flex flex-col` without height constraints)
+- [ ] Data grids have `minHeight: '600px'` style
+- [ ] Test EVERY tab to ensure content scrolls past bottom of window
+- [ ] Test with varying window heights to ensure scrolling works
+
+### Automated Fix Script
+
+If bulk fixing is needed, use: `D:\Scripts\UserMandA-1\fix-scrolling-simple.ps1`
+
+This script automatically applies the scrolling pattern to all discovered views.
+
+---
