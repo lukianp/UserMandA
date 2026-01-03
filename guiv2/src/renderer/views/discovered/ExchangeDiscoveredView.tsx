@@ -107,107 +107,25 @@ export const ExchangeDiscoveredView: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
             <Mail size={28} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Exchange Online
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Exchange Online</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Mailboxes, mail flow, security policies, DNS, and migration configuration
+              {statistics.totalMailboxes} mailboxes, {statistics.totalGroups} groups, {statistics.totalTransportRules || 0} transport rules
             </p>
           </div>
         </div>
       </div>
 
-      {/* Statistics Cards Grid (3 rows × 4 columns = 12 cards) */}
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Discovery Success % Card - prominent first position */}
-        <DiscoverySuccessCard
-          percentage={statistics.discoverySuccessPercentage || 0}
-          received={statistics.dataSourcesReceivedCount || 0}
-          total={statistics.dataSourcesTotal || 14}
-        />
-        <StatCard
-          icon={Mail}
-          label="Total Mailboxes"
-          value={statistics.totalMailboxes}
-          gradient="from-blue-500 to-blue-600"
-        />
-        <StatCard
-          icon={Users}
-          label="Distribution Groups"
-          value={statistics.totalGroups}
-          gradient="from-green-500 to-green-600"
-        />
-        <StatCard
-          icon={Workflow}
-          label="Transport Rules"
-          value={statistics.totalTransportRules || 0}
-          gradient="from-purple-500 to-purple-600"
-        />
-
-        {/* Row 2: Mail Flow */}
-        <StatCard
-          icon={Globe}
-          label="Accepted Domains"
-          value={statistics.totalDomains}
-          gradient="from-indigo-500 to-indigo-600"
-        />
-        <StatCard
-          icon={Network}
-          label="Remote Domains"
-          value={statistics.totalRemoteDomains || 0}
-          gradient="from-cyan-500 to-cyan-600"
-        />
-        <StatCard
-          icon={Server}
-          label="3rd Party Gateways"
-          value={statistics.thirdPartyGatewayDomains || 0}
-          gradient="from-emerald-500 to-emerald-600"
-        />
-        <StatCard
-          icon={Key}
-          label="DKIM Enabled"
-          value={statistics.enabledDkim || 0}
-          gradient="from-orange-500 to-orange-600"
-        />
-
-        {/* Row 3: Security & Migration */}
-        <StatCard
-          icon={Shield}
-          label="Security Policies"
-          value={(statistics.totalAntiSpamPolicies || 0) + (statistics.totalAntiPhishPolicies || 0) + (statistics.totalMalwarePolicies || 0)}
-          gradient="from-rose-500 to-rose-600"
-        />
-        <StatCard
-          icon={Plane}
-          label="Migration Batches"
-          value={statistics.totalMigrationBatches || 0}
-          gradient="from-violet-500 to-violet-600"
-        />
-        <StatCard
-          icon={CheckCircle2}
-          label="Active Mailboxes"
-          value={statistics.activeMailboxes}
-          gradient="from-teal-500 to-teal-600"
-        />
-        <StatCard
-          icon={Archive}
-          label="With Archive"
-          value={statistics.mailboxesWithArchive}
-          gradient="from-pink-500 to-pink-600"
-        />
-      </div>
-
-      {/* Tabs - Scrollable for many tabs */}
-      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-        <div className="flex gap-2 min-w-max">
+      {/* Tabs - IMMEDIATELY AFTER HEADER */}
+      <div className="px-6 pt-4 flex-shrink-0">
+        <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           <TabButton
             active={activeTab === 'overview'}
             onClick={() => setActiveTab('overview')}
@@ -289,157 +207,190 @@ export const ExchangeDiscoveredView: React.FC = () => {
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 overflow-hidden">
+      {/* Search - Only for data tabs */}
+      {activeTab !== 'overview' && (
+        <div className="px-6 py-4 flex-shrink-0">
+          <div className="relative max-w-md">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search..."
+              className="w-full px-4 py-2 pl-4 pr-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
         {activeTab === 'overview' && (
-          <OverviewTab statistics={statistics} />
+          <div className="space-y-6 pt-4">
+            {/* Statistics Cards Grid (3 rows × 4 columns = 12 cards) */}
+            <div className="grid grid-cols-4 gap-4">
+              <DiscoverySuccessCard
+                percentage={statistics.discoverySuccessPercentage || 0}
+                received={statistics.dataSourcesReceivedCount || 0}
+                total={statistics.dataSourcesTotal || 14}
+              />
+              <StatCard
+                icon={Mail}
+                label="Total Mailboxes"
+                value={statistics.totalMailboxes}
+                gradient="from-sky-500 to-sky-600"
+              />
+              <StatCard
+                icon={Users}
+                label="Distribution Groups"
+                value={statistics.totalGroups}
+                gradient="from-green-500 to-green-600"
+              />
+              <StatCard
+                icon={Workflow}
+                label="Transport Rules"
+                value={statistics.totalTransportRules || 0}
+                gradient="from-purple-500 to-purple-600"
+              />
+
+              {/* Row 2: Mail Flow */}
+              <StatCard
+                icon={Globe}
+                label="Accepted Domains"
+                value={statistics.totalDomains}
+                gradient="from-indigo-500 to-indigo-600"
+              />
+              <StatCard
+                icon={Network}
+                label="Remote Domains"
+                value={statistics.totalRemoteDomains || 0}
+                gradient="from-cyan-500 to-cyan-600"
+              />
+              <StatCard
+                icon={Server}
+                label="3rd Party Gateways"
+                value={statistics.thirdPartyGatewayDomains || 0}
+                gradient="from-emerald-500 to-emerald-600"
+              />
+              <StatCard
+                icon={Key}
+                label="DKIM Enabled"
+                value={statistics.enabledDkim || 0}
+                gradient="from-orange-500 to-orange-600"
+              />
+
+              {/* Row 3: Security & Migration */}
+              <StatCard
+                icon={Shield}
+                label="Security Policies"
+                value={(statistics.totalAntiSpamPolicies || 0) + (statistics.totalAntiPhishPolicies || 0) + (statistics.totalMalwarePolicies || 0)}
+                gradient="from-rose-500 to-rose-600"
+              />
+              <StatCard
+                icon={Plane}
+                label="Migration Batches"
+                value={statistics.totalMigrationBatches || 0}
+                gradient="from-violet-500 to-violet-600"
+              />
+              <StatCard
+                icon={CheckCircle2}
+                label="Active Mailboxes"
+                value={statistics.activeMailboxes}
+                gradient="from-teal-500 to-teal-600"
+              />
+              <StatCard
+                icon={Archive}
+                label="With Archive"
+                value={statistics.mailboxesWithArchive}
+                gradient="from-pink-500 to-pink-600"
+              />
+            </div>
+
+            {/* Breakdown Panels */}
+            <OverviewBreakdownPanels statistics={statistics} />
+          </div>
         )}
 
         {activeTab === 'mailboxes' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredMailboxes}
-            columns={mailboxColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_mailboxes"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid
+              data={filteredMailboxes}
+              columns={mailboxColumns}
+              enableFiltering={true}
+              enableColumnResize={true}
+            />
+          </div>
         )}
 
         {activeTab === 'groups' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredGroups}
-            columns={groupColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_groups"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredGroups} columns={groupColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
         {activeTab === 'contacts' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredContacts}
-            columns={contactColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_contacts"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredContacts} columns={contactColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
         {activeTab === 'domains' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredDomains}
-            columns={domainColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_domains"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredDomains} columns={domainColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
-        {/* Mail Flow Tabs */}
         {activeTab === 'transportRules' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredTransportRules}
-            columns={transportRuleColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_transport_rules"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredTransportRules} columns={transportRuleColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
         {activeTab === 'inboundConnectors' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredInboundConnectors}
-            columns={inboundConnectorColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_inbound_connectors"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredInboundConnectors} columns={inboundConnectorColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
         {activeTab === 'outboundConnectors' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredOutboundConnectors}
-            columns={outboundConnectorColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_outbound_connectors"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredOutboundConnectors} columns={outboundConnectorColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
-        {/* DNS Tab */}
         {activeTab === 'dns' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredDnsRecords}
-            columns={dnsRecordColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_dns_records"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredDnsRecords} columns={dnsRecordColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
-        {/* Security Tabs */}
         {activeTab === 'dkim' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredDkimConfigs}
-            columns={dkimConfigColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_dkim"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredDkimConfigs} columns={dkimConfigColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
         {activeTab === 'antiSpam' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredAntiSpamPolicies}
-            columns={antiSpamPolicyColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_antispam"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredAntiSpamPolicies} columns={antiSpamPolicyColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
         {activeTab === 'antiPhish' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredAntiPhishPolicies}
-            columns={antiPhishPolicyColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_antiphish"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredAntiPhishPolicies} columns={antiPhishPolicyColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
         {activeTab === 'malware' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredMalwarePolicies}
-            columns={malwarePolicyColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_malware"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredMalwarePolicies} columns={malwarePolicyColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
 
-        {/* Migration Tab */}
         {activeTab === 'migrationBatches' && (
-          <DataTab
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            data={filteredMigrationBatches}
-            columns={migrationBatchColumns}
-            exportToCSV={exportToCSV}
-            csvFileName="exchange_migration_batches"
-          />
+          <div className="h-[calc(100vh-320px)]">
+            <VirtualizedDataGrid data={filteredMigrationBatches} columns={migrationBatchColumns} enableFiltering={true} enableColumnResize={true} />
+          </div>
         )}
       </div>
     </div>
@@ -517,13 +468,11 @@ const TabButton: React.FC<TabButtonProps> = ({ active, onClick, icon: Icon, labe
   return (
     <button
       onClick={onClick}
-      className={`
-        flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2
-        ${active
-          ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
-          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-        }
-      `}
+      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+        active
+          ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-b-2 border-blue-600'
+          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+      }`}
     >
       <Icon size={16} />
       {label}
@@ -531,63 +480,13 @@ const TabButton: React.FC<TabButtonProps> = ({ active, onClick, icon: Icon, labe
   );
 };
 
-interface DataTabProps {
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  data: any[];
-  columns: any[];
-  exportToCSV: () => void;
-  csvFileName: string;
-}
-
-const DataTab: React.FC<DataTabProps> = ({
-  searchTerm,
-  setSearchTerm,
-  data,
-  columns,
-  exportToCSV,
-  csvFileName,
-}) => {
-  return (
-    <div className="h-full flex flex-col p-6">
-      {/* Search and Export */}
-      <div className="flex gap-4 mb-4">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search..."
-          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-        />
-        <button
-          onClick={exportToCSV}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-        >
-          Export CSV
-        </button>
-      </div>
-
-      {/* Data Grid */}
-      <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <VirtualizedDataGrid
-          data={data}
-          columns={columns}
-          enableFiltering={true}
-          enableColumnResize={true}
-        />
-      </div>
-    </div>
-  );
-};
-
-interface OverviewTabProps {
+interface OverviewBreakdownPanelsProps {
   statistics: any;
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ statistics }) => {
+const OverviewBreakdownPanels: React.FC<OverviewBreakdownPanelsProps> = ({ statistics }) => {
   return (
-    <div className="p-6 overflow-y-auto h-full">
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className="grid grid-cols-2 gap-6">
         {/* Mailbox Breakdown */}
         <BreakdownPanel
           title="Mailbox Breakdown"
@@ -666,7 +565,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ statistics }) => {
           ]}
         />
       </div>
-    </div>
   );
 };
 

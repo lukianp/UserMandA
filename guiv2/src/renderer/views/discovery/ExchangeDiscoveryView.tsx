@@ -137,7 +137,7 @@ const ExchangeDiscoveryView: React.FC = () => {
   } = useExchangeDiscoveredLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="exchange-discovery-view" data-testid="exchange-discovery-view">
+    <div className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="exchange-discovery-view" data-testid="exchange-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4">
@@ -505,14 +505,14 @@ const ExchangeDiscoveryView: React.FC = () => {
           )}
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
             {discoveredTab === 'overview' ? (
               <DiscoveredOverviewTab statistics={discoveredStatistics} />
             ) : (
               <div className="h-full p-4">
                 <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
                   <VirtualizedDataGrid
-                    data={
+                    data={(
                       discoveredTab === 'mailboxes' ? filteredMailboxes :
                       discoveredTab === 'groups' ? filteredGroups :
                       discoveredTab === 'contacts' ? filteredContacts :
@@ -526,7 +526,7 @@ const ExchangeDiscoveryView: React.FC = () => {
                       discoveredTab === 'antiPhish' ? filteredAntiPhishPolicies :
                       discoveredTab === 'malware' ? filteredMalwarePolicies :
                       discoveredTab === 'migrationBatches' ? filteredMigrationBatches : []
-                    }
+                    ) as any[]}
                     columns={
                       discoveredTab === 'mailboxes' ? discoveredMailboxColumns :
                       discoveredTab === 'groups' ? discoveredGroupColumns :
