@@ -198,9 +198,9 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
     }, [error]);
 
     return (
-      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy={dataCy}>
+      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden" data-cy={dataCy}>
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               {/* Discovery Status Card */}
@@ -267,7 +267,7 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
 
         {/* Search bar and Quick Filters */}
         {enableSearch && (
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex-shrink-0">
             <div className="flex items-center gap-4">
               {/* Search input */}
               <div className="relative max-w-md flex-1">
@@ -348,7 +348,7 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
         )}
 
         {/* Data grid or error/loading states */}
-        <div className="flex-1 p-6 overflow-hidden">
+        <div className="flex-1 p-6 overflow-y-auto min-h-0">
           {loading && data.length === 0 && (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">

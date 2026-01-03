@@ -32,6 +32,7 @@ export interface DashboardTile {
   title: string;
   defaultSize: { w: number; h: number };
   minSize?: { w: number; h: number };
+  compulsory?: boolean; // If true, tile cannot be removed from dashboard
 }
 
 // Dashboard state for persistence
@@ -407,6 +408,13 @@ export function useDashboardLayout(options: UseDashboardLayoutOptions): UseDashb
 
   // Remove tile
   const removeTile = useCallback((tileId: string) => {
+    // Prevent removal of compulsory tiles
+    const tile = availableTiles.find(t => t.id === tileId);
+    if (tile?.compulsory) {
+      console.warn(`[Dashboard] Cannot remove compulsory tile: ${tileId}`);
+      return;
+    }
+
     const newTiles = activeTiles.filter(id => id !== tileId);
     setActiveTiles(newTiles);
 
@@ -418,7 +426,7 @@ export function useDashboardLayout(options: UseDashboardLayoutOptions): UseDashb
 
     setLayouts(newLayouts);
     saveToStorage(newLayouts);
-  }, [activeTiles, layouts, saveToStorage]);
+  }, [activeTiles, availableTiles, layouts, saveToStorage]);
 
   // Reset to defaults
   const resetLayout = useCallback(() => {

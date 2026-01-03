@@ -21,16 +21,13 @@ const LoadingFallback: React.FC = () => (
 );
 
 /**
- * Lazy load wrapper with Suspense
+ * Helper to wrap lazy components with Suspense
  */
-const lazyLoad = (factory: () => Promise<{ default: React.ComponentType<any> }>) => {
-  const LazyComponent = lazy(factory);
-  return (
-    <Suspense fallback={<LoadingFallback />}>
-      <LazyComponent />
-    </Suspense>
-  );
-};
+const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<any>>) => (
+  <Suspense fallback={<LoadingFallback />}>
+    <Component />
+  </Suspense>
+);
 
 /**
  * Lazy loaded views
@@ -111,43 +108,127 @@ const PolicyManagementView = lazy(() => import('./views/security/PolicyManagemen
 // Licensing views
 const LicensingHubView = lazy(() => import('./features/licensingHub/views/LicensingHubView'));
 
+// Additional discovery views
+const InfrastructureDiscoveryView = lazy(() => import('./views/discovery/InfrastructureDiscoveryView'));
+const ConditionalAccessDiscoveryView = lazy(() => import('./views/discovery/ConditionalAccessDiscoveryView'));
+const DLPDiscoveryView = lazy(() => import('./views/discovery/DLPDiscoveryView'));
+const CertificateDiscoveryView = lazy(() => import('./views/discovery/CertificateDiscoveryView'));
+const CertificateAuthorityDiscoveryView = lazy(() => import('./views/discovery/CertificateAuthorityDiscoveryView'));
+const DNSDHCPDiscoveryView = lazy(() => import('./views/discovery/DNSDHCPDiscoveryView'));
+const PrinterDiscoveryView = lazy(() => import('./views/discovery/PrinterDiscoveryView'));
+const VirtualizationDiscoveryView = lazy(() => import('./views/discovery/VirtualizationDiscoveryView'));
+const PhysicalServerDiscoveryView = lazy(() => import('./views/discovery/PhysicalServerDiscoveryView'));
+const StorageArrayDiscoveryView = lazy(() => import('./views/discovery/StorageArrayDiscoveryView'));
+const DatabaseSchemaDiscoveryView = lazy(() => import('./views/discovery/DatabaseSchemaDiscoveryView'));
+const WebServerConfigDiscoveryView = lazy(() => import('./views/discovery/WebServerConfigDiscoveryView'));
+const PowerPlatformDiscoveryView = lazy(() => import('./views/discovery/PowerPlatformDiscoveryView'));
+const PowerBIDiscoveryView = lazy(() => import('./views/discovery/PowerBIDiscoveryView'));
+const EntraIDAppDiscoveryView = lazy(() => import('./views/discovery/EntraIDAppDiscoveryView'));
+const ExternalIdentityDiscoveryView = lazy(() => import('./views/discovery/ExternalIdentityDiscoveryView'));
+const GPODiscoveryView = lazy(() => import('./views/discovery/GPODiscoveryView'));
+const MultiDomainForestDiscoveryView = lazy(() => import('./views/discovery/MultiDomainForestDiscoveryView'));
+const DataClassificationDiscoveryView = lazy(() => import('./views/discovery/DataClassificationDiscoveryView'));
+const LicensingDiscoveryView = lazy(() => import('./views/discovery/LicensingDiscoveryView'));
+const ScheduledTaskDiscoveryView = lazy(() => import('./views/discovery/ScheduledTaskDiscoveryView'));
+const BackupRecoveryDiscoveryView = lazy(() => import('./views/discovery/BackupRecoveryDiscoveryView'));
+const PaloAltoDiscoveryView = lazy(() => import('./views/discovery/PaloAltoDiscoveryView'));
+const PanoramaInterrogationDiscoveryView = lazy(() => import('./views/discovery/PanoramaInterrogationDiscoveryView'));
+const GraphDiscoveryView = lazy(() => import('./views/discovery/GraphDiscoveryView'));
+const FileServerDiscoveryView = lazy(() => import('./views/discovery/FileServerDiscoveryView'));
+const AzureResourceDiscoveryView = lazy(() => import('./views/discovery/AzureResourceDiscoveryView'));
+const AzureVMSSDiscoveryView = lazy(() => import('./views/discovery/AzureVMSSDiscoveryView'));
+const AzureFunctionsDiscoveryView = lazy(() => import('./views/discovery/AzureFunctionsDiscoveryView'));
+const AzureACRDiscoveryView = lazy(() => import('./views/discovery/AzureACRDiscoveryView'));
+const AzureAutomationDiscoveryView = lazy(() => import('./views/discovery/AzureAutomationDiscoveryView'));
+const AzureLogicAppsDiscoveryView = lazy(() => import('./views/discovery/AzureLogicAppsDiscoveryView'));
+const AzureManagementGroupsDiscoveryView = lazy(() => import('./views/discovery/AzureManagementGroupsDiscoveryView'));
+const AzurePIMDiscoveryView = lazy(() => import('./views/discovery/AzurePIMDiscoveryView'));
+const AzureSubscriptionOwnersDiscoveryView = lazy(() => import('./views/discovery/AzureSubscriptionOwnersDiscoveryView'));
+const AzureKeyVaultAccessDiscoveryView = lazy(() => import('./views/discovery/AzureKeyVaultAccessDiscoveryView'));
+const AzureManagedIdentitiesDiscoveryView = lazy(() => import('./views/discovery/AzureManagedIdentitiesDiscoveryView'));
+const AzureServicePrincipalCredentialsDiscoveryView = lazy(() => import('./views/discovery/AzureServicePrincipalCredentialsDiscoveryView'));
+const AzureStorageAccountAccessDiscoveryView = lazy(() => import('./views/discovery/AzureStorageAccountAccessDiscoveryView'));
+
+// Additional migration views
+const MigrationDashboardView = lazy(() => import('./views/migration/MigrationDashboardView'));
+const GoNoGoCheckpointView = lazy(() => import('./views/migration/GoNoGoCheckpointView'));
+const GanttChartView = lazy(() => import('./views/migration/GanttChartView'));
+const MigrationMonitorView = lazy(() => import('./views/migration/MigrationMonitorView'));
+const UserMigrationView = lazy(() => import('./views/migration/UserMigrationView'));
+const MailboxMigrationView = lazy(() => import('./views/migration/MailboxMigrationView'));
+const SharePointMigrationView = lazy(() => import('./views/migration/SharePointMigrationView'));
+const OneDriveMigrationView = lazy(() => import('./views/migration/OneDriveMigrationView'));
+const TeamsMigrationView = lazy(() => import('./views/migration/TeamsMigrationView'));
+const DeviceMigrationView = lazy(() => import('./views/migration/DeviceMigrationView'));
+const DomainMappingView = lazy(() => import('./views/migration/DomainMappingView'));
+const AzureResourceMigrationView = lazy(() => import('./views/migration/AzureResourceMigrationView'));
+const MigrationEngineeringView = lazy(() => import('./views/migration/MigrationEngineeringView'));
+
+// Infrastructure & Inventory
+const InfrastructureView = lazy(() => import('./views/infrastructure/InfrastructureView'));
+const ConsolidatedUsersView = lazy(() => import('./views/inventory/ConsolidatedUsersView'));
+const ConsolidatedGroupsView = lazy(() => import('./views/inventory/ConsolidatedGroupsView'));
+const ConsolidatedApplicationsView = lazy(() => import('./views/inventory/ConsolidatedApplicationsView'));
+const ConsolidatedInfrastructureView = lazy(() => import('./views/inventory/ConsolidatedInfrastructureView'));
+const ApplicationInventoryView = lazy(() => import('./views/inventory/ApplicationInventoryView'));
+
 /**
  * Application routes
  */
 export const routes: RouteObject[] = [
   {
     path: '/',
-    element: lazyLoad(() => import('./views/overview/OverviewView')),
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <OverviewView />
+      </Suspense>
+    ),
   },
   {
     path: '/overview',
-    element: lazyLoad(() => import('./views/overview/OverviewView')),
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <OverviewView />
+      </Suspense>
+    ),
   },
 
   // Setup routes
   {
     path: '/setup',
-    element: lazyLoad(() => import('./views/setup/SetupCompanyView')),
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <SetupCompanyView />
+      </Suspense>
+    ),
   },
   {
     path: '/setup/company',
-    element: lazyLoad(() => import('./views/setup/SetupCompanyView')),
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <SetupCompanyView />
+      </Suspense>
+    ),
   },
   {
     path: '/setup/installers',
-    element: lazyLoad(() => import('./views/setup/SetupInstallersView')),
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <SetupInstallersView />
+      </Suspense>
+    ),
   },
 
   // Discovery routes
   {
     path: '/discovery',
-    element: lazyLoad(() => import('./views/discovery/InfrastructureDiscoveryHubView')),
+    element: (<Suspense fallback={<LoadingFallback />}><InfrastructureDiscoveryHubView /></Suspense>),
   },
 
   // Organisation Map
   {
     path: '/organisation-map',
-    element: lazyLoad(() => import('./views/organisation/OrganisationMapView')),
+    element: (<Suspense fallback={<LoadingFallback />}><OrganisationMapView /></Suspense>),
   },
 
   // ========================================================================
@@ -158,244 +239,244 @@ export const routes: RouteObject[] = [
 
   {
     path: '/discovery/dashboard',
-    element: lazyLoad(() => import('./views/discovery/InfrastructureDiscoveryHubView')),
+    element: (<Suspense fallback={<LoadingFallback />}><InfrastructureDiscoveryHubView /></Suspense>),
   },
   {
     path: '/discovery/active-directory',
-    element: lazyLoad(() => import('./views/discovery/ActiveDirectoryDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ActiveDirectoryDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure',
-    element: lazyLoad(() => import('./views/discovery/EntraIDM365DiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><EntraIDM365DiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/aws',
-    element: lazyLoad(() => import('./views/discovery/AWSCloudInfrastructureDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AWSCloudInfrastructureDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/exchange',
-    element: lazyLoad(() => import('./views/discovery/ExchangeDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ExchangeDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/sharepoint',
-    element: lazyLoad(() => import('./views/discovery/SharePointDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><SharePointDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/teams',
-    element: lazyLoad(() => import('./views/discovery/TeamsDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><TeamsDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/onedrive',
-    element: lazyLoad(() => import('./views/discovery/OneDriveDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><OneDriveDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/file-system',
-    element: lazyLoad(() => import('./views/discovery/FileSystemDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><FileSystemDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/domain',
-    element: lazyLoad(() => import('./views/discovery/DomainDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><DomainDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/network',
-    element: lazyLoad(() => import('./views/discovery/NetworkDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><NetworkDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/applications',
-    element: lazyLoad(() => import('./views/discovery/ApplicationDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ApplicationDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/environment',
-    element: lazyLoad(() => import('./views/discovery/EnvironmentDetectionView')),
+    element: (<Suspense fallback={<LoadingFallback />}><EnvironmentDetectionView /></Suspense>),
   },
   {
     path: '/discovery/google-workspace',
-    element: lazyLoad(() => import('./views/discovery/GoogleWorkspaceDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><GoogleWorkspaceDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/hyper-v',
-    element: lazyLoad(() => import('./views/discovery/HyperVDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><HyperVDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/infrastructure',
-    element: lazyLoad(() => import('./views/discovery/InfrastructureDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><InfrastructureDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/office365',
-    element: lazyLoad(() => import('./views/discovery/Office365DiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><Office365DiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/security',
-    element: lazyLoad(() => import('./views/discovery/SecurityInfrastructureDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><SecurityInfrastructureDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/sql-server',
-    element: lazyLoad(() => import('./views/discovery/SQLServerDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><SQLServerDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/vmware',
-    element: lazyLoad(() => import('./views/discovery/VMwareDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><VMwareDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/intune',
-    element: lazyLoad(() => import('./views/discovery/IntuneDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><IntuneDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/conditional-access',
-    element: lazyLoad(() => import('./views/discovery/ConditionalAccessDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ConditionalAccessDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/dlp',
-    element: lazyLoad(() => import('./views/discovery/DLPDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><DLPDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/certificate',
-    element: lazyLoad(() => import('./views/discovery/CertificateDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><CertificateDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/certificate-authority',
-    element: lazyLoad(() => import('./views/discovery/CertificateAuthorityDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><CertificateAuthorityDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/dns-dhcp',
-    element: lazyLoad(() => import('./views/discovery/DNSDHCPDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><DNSDHCPDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/printer',
-    element: lazyLoad(() => import('./views/discovery/PrinterDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><PrinterDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/virtualization',
-    element: lazyLoad(() => import('./views/discovery/VirtualizationDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><VirtualizationDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/physical-server',
-    element: lazyLoad(() => import('./views/discovery/PhysicalServerDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><PhysicalServerDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/storage-array',
-    element: lazyLoad(() => import('./views/discovery/StorageArrayDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><StorageArrayDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/database-schema',
-    element: lazyLoad(() => import('./views/discovery/DatabaseSchemaDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><DatabaseSchemaDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/web-server',
-    element: lazyLoad(() => import('./views/discovery/WebServerConfigDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><WebServerConfigDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/power-platform',
-    element: lazyLoad(() => import('./views/discovery/PowerPlatformDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><PowerPlatformDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/powerbi',
-    element: lazyLoad(() => import('./views/discovery/PowerBIDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><PowerBIDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/entra-id-app',
-    element: lazyLoad(() => import('./views/discovery/EntraIDAppDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><EntraIDAppDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/external-identity',
-    element: lazyLoad(() => import('./views/discovery/ExternalIdentityDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ExternalIdentityDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/gpo',
-    element: lazyLoad(() => import('./views/discovery/GPODiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><GPODiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/multi-domain-forest',
-    element: lazyLoad(() => import('./views/discovery/MultiDomainForestDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MultiDomainForestDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/data-classification',
-    element: lazyLoad(() => import('./views/discovery/DataClassificationDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><DataClassificationDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/licensing',
-    element: lazyLoad(() => import('./views/discovery/LicensingDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><LicensingDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/scheduled-task',
-    element: lazyLoad(() => import('./views/discovery/ScheduledTaskDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ScheduledTaskDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/backup-recovery',
-    element: lazyLoad(() => import('./views/discovery/BackupRecoveryDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><BackupRecoveryDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/palo-alto',
-    element: lazyLoad(() => import('./views/discovery/PaloAltoDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><PaloAltoDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/panorama-interrogation',
-    element: lazyLoad(() => import('./views/discovery/PanoramaInterrogationDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><PanoramaInterrogationDiscoveryView /></Suspense>),
   },
   // Temporarily disabled - hook not implemented yet
   // {
   //   path: '/discovery/gcp',
-  //   element: lazyLoad(() => import('./views/discovery/GCPDiscoveryView')),
+  //   element: withSuspense(() => import('./views/discovery/GCPDiscoveryView')),
   // },
   {
     path: '/discovery/graph',
-    element: lazyLoad(() => import('./views/discovery/GraphDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><GraphDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/file-server',
-    element: lazyLoad(() => import('./views/discovery/FileServerDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><FileServerDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-resource',
-    element: lazyLoad(() => import('./views/discovery/AzureResourceDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureResourceDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-vmss',
-    element: lazyLoad(() => import('./views/discovery/AzureVMSSDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureVMSSDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-functions',
-    element: lazyLoad(() => import('./views/discovery/AzureFunctionsDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureFunctionsDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-acr',
-    element: lazyLoad(() => import('./views/discovery/AzureACRDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureACRDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-automation',
-    element: lazyLoad(() => import('./views/discovery/AzureAutomationDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureAutomationDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-logicapps',
-    element: lazyLoad(() => import('./views/discovery/AzureLogicAppsDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureLogicAppsDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-mgmt-groups',
-    element: lazyLoad(() => import('./views/discovery/AzureManagementGroupsDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureManagementGroupsDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-pim',
-    element: lazyLoad(() => import('./views/discovery/AzurePIMDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzurePIMDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-sub-owners',
-    element: lazyLoad(() => import('./views/discovery/AzureSubscriptionOwnersDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureSubscriptionOwnersDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-keyvault-access',
-    element: lazyLoad(() => import('./views/discovery/AzureKeyVaultAccessDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureKeyVaultAccessDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-managed-identities',
-    element: lazyLoad(() => import('./views/discovery/AzureManagedIdentitiesDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureManagedIdentitiesDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-sp-credentials',
-    element: lazyLoad(() => import('./views/discovery/AzureServicePrincipalCredentialsDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureServicePrincipalCredentialsDiscoveryView /></Suspense>),
   },
   {
     path: '/discovery/azure-storage-access',
-    element: lazyLoad(() => import('./views/discovery/AzureStorageAccountAccessDiscoveryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureStorageAccountAccessDiscoveryView /></Suspense>),
   },
 
   // Auto-generated discovered data routes (CSV display views)
@@ -404,232 +485,232 @@ export const routes: RouteObject[] = [
   // Migration Control Plane routes
   {
     path: '/migration',
-    element: lazyLoad(() => import('./views/migration/MigrationDashboardView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationDashboardView /></Suspense>),
   },
   {
     path: '/migration/dashboard',
-    element: lazyLoad(() => import('./views/migration/MigrationDashboardView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationDashboardView /></Suspense>),
   },
   {
     path: '/migration/planning',
-    element: lazyLoad(() => import('./views/migration/MigrationPlanningView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationPlanningView /></Suspense>),
   },
   {
     path: '/migration/mapping',
-    element: lazyLoad(() => import('./views/migration/MigrationMappingView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationMappingView /></Suspense>),
   },
   {
     path: '/migration/validation',
-    element: lazyLoad(() => import('./views/migration/MigrationValidationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationValidationView /></Suspense>),
   },
   {
     path: '/migration/go-no-go',
-    element: lazyLoad(() => import('./views/migration/GoNoGoCheckpointView')),
+    element: (<Suspense fallback={<LoadingFallback />}><GoNoGoCheckpointView /></Suspense>),
   },
   {
     path: '/migration/execution',
-    element: lazyLoad(() => import('./views/migration/MigrationExecutionView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationExecutionView /></Suspense>),
   },
   {
     path: '/migration/gantt',
-    element: lazyLoad(() => import('./views/migration/GanttChartView')),
+    element: (<Suspense fallback={<LoadingFallback />}><GanttChartView /></Suspense>),
   },
   {
     path: '/migration/monitor',
-    element: lazyLoad(() => import('./views/migration/MigrationMonitorView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationMonitorView /></Suspense>),
   },
   // Migration Workload routes
   {
     path: '/migration/workloads',
-    element: lazyLoad(() => import('./views/migration/UserMigrationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><UserMigrationView /></Suspense>),
   },
   {
     path: '/migration/workloads/users',
-    element: lazyLoad(() => import('./views/migration/UserMigrationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><UserMigrationView /></Suspense>),
   },
   {
     path: '/migration/workloads/mailboxes',
-    element: lazyLoad(() => import('./views/migration/MailboxMigrationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MailboxMigrationView /></Suspense>),
   },
   {
     path: '/migration/workloads/sharepoint',
-    element: lazyLoad(() => import('./views/migration/SharePointMigrationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><SharePointMigrationView /></Suspense>),
   },
   {
     path: '/migration/workloads/onedrive',
-    element: lazyLoad(() => import('./views/migration/OneDriveMigrationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><OneDriveMigrationView /></Suspense>),
   },
   {
     path: '/migration/workloads/teams',
-    element: lazyLoad(() => import('./views/migration/TeamsMigrationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><TeamsMigrationView /></Suspense>),
   },
   {
     path: '/migration/workloads/devices',
-    element: lazyLoad(() => import('./views/migration/DeviceMigrationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><DeviceMigrationView /></Suspense>),
   },
 
   // Enhanced Migration Control Plane routes
   {
     path: '/migration/domain-mapping',
-    element: lazyLoad(() => import('./views/migration/DomainMappingView')),
+    element: (<Suspense fallback={<LoadingFallback />}><DomainMappingView /></Suspense>),
   },
   {
     path: '/migration/azure-resources',
-    element: lazyLoad(() => import('./views/migration/AzureResourceMigrationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AzureResourceMigrationView /></Suspense>),
   },
   {
     path: '/migration/engineering',
-    element: lazyLoad(() => import('./views/migration/MigrationEngineeringView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationEngineeringView /></Suspense>),
   },
 
   // Consolidated Inventory
   {
     path: '/inventory/users',
-    element: lazyLoad(() => import('./views/inventory/ConsolidatedUsersView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ConsolidatedUsersView /></Suspense>),
   },
   {
     path: '/inventory/groups',
-    element: lazyLoad(() => import('./views/inventory/ConsolidatedGroupsView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ConsolidatedGroupsView /></Suspense>),
   },
   {
     path: '/inventory/applications',
-    element: lazyLoad(() => import('./views/inventory/ConsolidatedApplicationsView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ConsolidatedApplicationsView /></Suspense>),
   },
   {
     path: '/inventory/infrastructure',
-    element: lazyLoad(() => import('./views/inventory/ConsolidatedInfrastructureView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ConsolidatedInfrastructureView /></Suspense>),
   },
   {
     path: '/inventory/factsheets',
-    element: lazyLoad(() => import('./views/inventory/ApplicationInventoryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ApplicationInventoryView /></Suspense>),
   },
 
   // Users & Groups
   {
     path: '/users',
-    element: lazyLoad(() => import('./views/users/UsersView')),
+    element: (<Suspense fallback={<LoadingFallback />}><UsersView /></Suspense>),
   },
   {
     path: '/groups',
-    element: lazyLoad(() => import('./views/groups/GroupsView')),
+    element: (<Suspense fallback={<LoadingFallback />}><GroupsView /></Suspense>),
   },
 
   // Analytics
   {
     path: '/analytics/executive',
-    element: lazyLoad(() => import('./views/analytics/ExecutiveDashboardView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ExecutiveDashboardView /></Suspense>),
   },
   {
     path: '/analytics/migration',
-    element: lazyLoad(() => import('./views/analytics/MigrationReportView')),
+    element: (<Suspense fallback={<LoadingFallback />}><MigrationReportView /></Suspense>),
   },
   {
     path: '/analytics/users',
-    element: lazyLoad(() => import('./views/analytics/UserAnalyticsView')),
+    element: (<Suspense fallback={<LoadingFallback />}><UserAnalyticsView /></Suspense>),
   },
   {
     path: '/analytics/cost',
-    element: lazyLoad(() => import('./views/analytics/CostAnalysisView')),
+    element: (<Suspense fallback={<LoadingFallback />}><CostAnalysisView /></Suspense>),
   },
   {
     path: '/analytics/trends',
-    element: lazyLoad(() => import('./views/analytics/TrendAnalysisView')),
+    element: (<Suspense fallback={<LoadingFallback />}><TrendAnalysisView /></Suspense>),
   },
 
   // Admin
   {
     path: '/admin/users',
-    element: lazyLoad(() => import('./views/admin/UserManagementView')),
+    element: (<Suspense fallback={<LoadingFallback />}><UserManagementView /></Suspense>),
   },
   {
     path: '/admin/roles',
-    element: lazyLoad(() => import('./views/admin/RoleManagementView')),
+    element: (<Suspense fallback={<LoadingFallback />}><RoleManagementView /></Suspense>),
   },
   {
     path: '/admin/permissions',
-    element: lazyLoad(() => import('./views/admin/PermissionsView')),
+    element: (<Suspense fallback={<LoadingFallback />}><PermissionsView /></Suspense>),
   },
   {
     path: '/admin/audit',
-    element: lazyLoad(() => import('./views/admin/AuditLogView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AuditLogView /></Suspense>),
   },
   {
     path: '/admin/system',
-    element: lazyLoad(() => import('./views/admin/SystemConfigurationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><SystemConfigurationView /></Suspense>),
   },
   {
     path: '/admin/backup',
-    element: lazyLoad(() => import('./views/admin/BackupRestoreView')),
+    element: (<Suspense fallback={<LoadingFallback />}><BackupRestoreView /></Suspense>),
   },
   {
     path: '/admin/license',
-    element: lazyLoad(() => import('./views/admin/LicenseActivationView')),
+    element: (<Suspense fallback={<LoadingFallback />}><LicenseActivationView /></Suspense>),
   },
   {
     path: '/admin/about',
-    element: lazyLoad(() => import('./views/admin/AboutView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AboutView /></Suspense>),
   },
 
   // Infrastructure
   {
     path: '/infrastructure',
-    element: lazyLoad(() => import('./views/infrastructure/InfrastructureView')),
+    element: (<Suspense fallback={<LoadingFallback />}><InfrastructureView /></Suspense>),
   },
 
   // Assets
   {
     path: '/assets/inventory',
-    element: lazyLoad(() => import('./views/assets/AssetInventoryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><AssetInventoryView /></Suspense>),
   },
   {
     path: '/assets/servers',
-    element: lazyLoad(() => import('./views/assets/ServerInventoryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ServerInventoryView /></Suspense>),
   },
   {
     path: '/assets/network-devices',
-    element: lazyLoad(() => import('./views/assets/NetworkDeviceInventoryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><NetworkDeviceInventoryView /></Suspense>),
   },
   {
     path: '/assets/computers',
-    element: lazyLoad(() => import('./views/assets/ComputerInventoryView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ComputerInventoryView /></Suspense>),
   },
 
   // Security & Compliance
   {
     path: '/security/audit',
-    element: lazyLoad(() => import('./views/security/SecurityAuditView')),
+    element: (<Suspense fallback={<LoadingFallback />}><SecurityAuditView /></Suspense>),
   },
   {
     path: '/compliance/dashboard',
-    element: lazyLoad(() => import('./views/compliance/ComplianceDashboardView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ComplianceDashboardView /></Suspense>),
   },
   {
     path: '/compliance/report',
-    element: lazyLoad(() => import('./views/compliance/ComplianceReportView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ComplianceReportView /></Suspense>),
   },
   {
     path: '/security/risk',
-    element: lazyLoad(() => import('./views/security/RiskAssessmentView')),
+    element: (<Suspense fallback={<LoadingFallback />}><RiskAssessmentView /></Suspense>),
   },
   {
     path: '/security/policy',
-    element: lazyLoad(() => import('./views/security/PolicyManagementView')),
+    element: (<Suspense fallback={<LoadingFallback />}><PolicyManagementView /></Suspense>),
   },
 
   // Licensing Hub
   {
     path: '/licensing',
-    element: lazyLoad(() => import('./features/licensingHub/views/LicensingHubView')),
+    element: (<Suspense fallback={<LoadingFallback />}><LicensingHubView /></Suspense>),
   },
 
   // Reports & Settings
   {
     path: '/reports',
-    element: lazyLoad(() => import('./views/reports/ReportsView')),
+    element: (<Suspense fallback={<LoadingFallback />}><ReportsView /></Suspense>),
   },
   {
     path: '/settings',
-    element: lazyLoad(() => import('./views/settings/SettingsView')),
+    element: (<Suspense fallback={<LoadingFallback />}><SettingsView /></Suspense>),
   },
 
   // 404 Not Found
