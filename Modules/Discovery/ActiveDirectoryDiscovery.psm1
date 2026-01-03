@@ -2,9 +2,9 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Version: 2.1.0
 # Created: 2025-01-18
-# Last Modified: 2025-01-18
+# Last Modified: 2026-01-02
 
 <#
 .SYNOPSIS
@@ -15,10 +15,25 @@
     permission analysis, group membership mapping, and security assessment capabilities essential for 
     M&A due diligence and migration planning.
 .NOTES
-    Version: 1.0.0
+    Version: 2.1.0
     Author: Lukian Poleschtschuk
     Created: 2025-01-18
+    Last Modified: 2026-01-02
     Requires: PowerShell 5.1+, ActiveDirectory module, Windows authentication
+
+    Changelog:
+    - v2.1.0 (2026-01-02): Migration enhancement
+      - Added MemberOfGroups field to user export (full group DN list)
+      - Enables direct migration planning without cross-referencing
+    - v2.0.0 (2026-01-02): Major security enhancement
+      - Added nested group membership expansion (recursive)
+      - Extended user attributes (adminCount, userAccountControl, SPN, Kerberos)
+      - Extended group attributes (objectSid, adminCount, privileged group detection)
+      - Extended computer attributes (SPN, server role detection)
+      - Added retry logic with exponential backoff
+      - Added 3 new CSV exports: ADNestedGroupMemberships, ADPrivilegedAccounts, ADKerberosDelegation
+      - Total CSV files: 10 → 16
+    - v1.0.0 (2025-01-18): Initial release
 #>
 
 # Fallback logging function if Write-MandALog is not available
@@ -85,6 +100,135 @@ function Write-ActiveDirectoryLog {
         [hashtable]$Context
     )
     Write-MandALog -Message "[ActiveDirectory] $Message" -Level $Level -Component "ActiveDirectoryDiscovery" -Context $Context
+}
+
+function Invoke-ADCommandWithRetry {
+    <#
+    .SYNOPSIS
+        Executes an AD command with retry logic and exponential backoff
+    .DESCRIPTION
+        Wraps AD cmdlets with automatic retry on transient failures, using exponential backoff strategy
+    .PARAMETER Command
+        The scriptblock to execute
+    .PARAMETER MaxRetries
+        Maximum number of retry attempts (default: 3)
+    .PARAMETER RetryDelaySeconds
+        Initial retry delay in seconds (default: 2, doubles each retry)
+    .PARAMETER Context
+        Context hashtable for logging
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [scriptblock]$Command,
+        [int]$MaxRetries = 3,
+        [int]$RetryDelaySeconds = 2,
+        [hashtable]$Context = @{}
+    )
+
+    $attempt = 0
+    $lastError = $null
+
+    while ($attempt -lt $MaxRetries) {
+        try {
+            $attempt++
+            return & $Command
+        } catch {
+            $lastError = $_
+            if ($attempt -lt $MaxRetries) {
+                Write-ActiveDirectoryLog -Message "Attempt $attempt failed, retrying in $RetryDelaySeconds seconds: $($_.Exception.Message)" -Level "WARN" -Context $Context
+                Start-Sleep -Seconds $RetryDelaySeconds
+                $RetryDelaySeconds *= 2  # Exponential backoff
+            }
+        }
+    }
+
+    throw "Failed after $MaxRetries attempts: $($lastError.Exception.Message)"
+}
+
+function Get-ADGroupMembershipExpanded {
+    <#
+    .SYNOPSIS
+        Recursively expands group membership including nested groups
+    .DESCRIPTION
+        Discovers all members of a group including indirect membership through nested groups.
+        Tracks membership paths and prevents infinite loops in circular group references.
+    .PARAMETER Group
+        The AD group object to expand
+    .PARAMETER ServerParams
+        Server connection parameters
+    .PARAMETER MembershipPath
+        Current membership path (for recursion tracking)
+    .PARAMETER ProcessedGroups
+        HashSet of already processed groups (prevents infinite loops)
+    .PARAMETER Context
+        Context hashtable for logging
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        $Group,
+        [Parameter(Mandatory=$true)]
+        [hashtable]$ServerParams,
+        [Parameter(Mandatory=$false)]
+        [string]$MembershipPath = "",
+        [Parameter(Mandatory=$false)]
+        [System.Collections.Generic.HashSet[string]]$ProcessedGroups = [System.Collections.Generic.HashSet[string]]::new(),
+        [hashtable]$Context = @{}
+    )
+
+    $members = @()
+    $groupDN = $Group.DistinguishedName
+
+    # Prevent infinite loops in nested groups
+    if ($ProcessedGroups.Contains($groupDN)) {
+        return $members
+    }
+    $ProcessedGroups.Add($groupDN) | Out-Null
+
+    # Build membership path
+    $currentPath = if ($MembershipPath) { "$MembershipPath > $($Group.SamAccountName)" } else { $Group.SamAccountName }
+
+    # Get direct members
+    if ($Group.member) {
+        foreach ($memberDN in $Group.member) {
+            try {
+                $memberObj = Get-ADObject -Identity $memberDN -Properties SamAccountName, ObjectClass, memberOf @ServerParams -ErrorAction Stop
+
+                # Add direct member
+                $members += [PSCustomObject]@{
+                    GroupDN = $groupDN
+                    GroupName = $Group.SamAccountName
+                    MemberDN = $memberDN
+                    MemberSamAccountName = $memberObj.SamAccountName
+                    MemberObjectClass = $memberObj.ObjectClass
+                    MembershipType = 'Direct'
+                    MembershipPath = $currentPath
+                    NestingLevel = ($currentPath -split '>').Count - 1
+                }
+
+                # If member is a group, recurse to get nested members
+                if ($memberObj.ObjectClass -eq 'group') {
+                    try {
+                        $nestedGroup = Get-ADGroup -Identity $memberDN -Properties member, SamAccountName @ServerParams -ErrorAction Stop
+                        $nestedMembers = Get-ADGroupMembershipExpanded -Group $nestedGroup -ServerParams $ServerParams -MembershipPath $currentPath -ProcessedGroups $ProcessedGroups -Context $Context
+
+                        # Mark nested members as indirect
+                        foreach ($nm in $nestedMembers) {
+                            $nm.MembershipType = 'Indirect'
+                            $members += $nm
+                        }
+                    } catch {
+                        Write-ActiveDirectoryLog -Message "Failed to expand nested group '$memberDN' for group '$($Group.SamAccountName)': $_" -Level "WARN" -Context $Context
+                    }
+                }
+            } catch {
+                Write-ActiveDirectoryLog -Message "Failed to expand member '$memberDN' for group '$($Group.SamAccountName)': $_" -Level "WARN" -Context $Context
+            }
+        }
+    }
+
+    return $members
 }
 
 function Connect-MgGraphWithMultipleStrategies {
@@ -200,8 +344,12 @@ function Invoke-ActiveDirectoryDiscovery {
         [string]$SessionId
     )
 
-    Write-ActiveDirectoryLog -Level "HEADER" -Message "?? Starting Active Directory Discovery (v3.0 - Session-based)" -Context $Context
-    Write-ActiveDirectoryLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
+        # Module version
+    $moduleVersion = "2.1.0"
+
+    Write-ActiveDirectoryLog -Level "HEADER" -Message "Active Directory Discovery Module v$moduleVersion" -Context $Context
+    Write-ActiveDirectoryLog -Level "INFO" -Message "Session ID: $SessionId" -Context $Context
+    Write-ActiveDirectoryLog -Level "INFO" -Message "Features: Nested groups | Org chart mapping | Security attributes | 16 CSV exports" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # 1. INITIALIZE RESULT OBJECT
@@ -341,8 +489,15 @@ function Invoke-ActiveDirectoryDiscovery {
                 $null = $allDiscoveredData.AddRange($groupData.Members)
                 $result.Metadata["GroupMembershipCount"] = $groupData.Members.Count
             }
-            
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($groupData.Groups.Count) groups with $($groupData.Members.Count) memberships" -Context $Context
+
+            # Nested group members (v2.0.0)
+            if ($groupData.NestedMembers.Count -gt 0) {
+                $groupData.NestedMembers | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'NestedGroupMember' -Force }
+                $null = $allDiscoveredData.AddRange($groupData.NestedMembers)
+                $result.Metadata["NestedGroupMembershipCount"] = $groupData.NestedMembers.Count
+            }
+
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Discovered $($groupData.Groups.Count) groups with $($groupData.Members.Count) direct memberships and $($groupData.NestedMembers.Count) nested memberships" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover groups: $($_.Exception.Message)", @{Section="Groups"})
         }
@@ -487,6 +642,88 @@ function Invoke-ActiveDirectoryDiscovery {
             $result.AddWarning("Failed to discover service accounts: $($_.Exception.Message)", @{Section="ServiceAccounts"})
         }
 
+        # Generate Privileged Accounts Report (v2.0.0)
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Generating privileged accounts report..." -Context $Context
+            $privilegedAccounts = @()
+
+            # Find privileged users
+            $privilegedUsers = $allDiscoveredData | Where-Object { $_._DataType -eq 'User' -and ($_IsPrivileged -eq $true -or $_.AdminCount -eq 1) }
+            foreach ($user in $privilegedUsers) {
+                $privilegedAccounts += [PSCustomObject]@{
+                    ObjectType = 'User'
+                    SamAccountName = $user.SamAccountName
+                    DistinguishedName = $user.DistinguishedName
+                    Reason = if ($user.AdminCount -eq 1) { "adminCount=1" } else { "IsPrivileged flag" }
+                    KerberosDelegationType = $user.KerberosDelegationType
+                    ServicePrincipalNames = $user.ServicePrincipalNames
+                }
+            }
+
+            # Find privileged groups
+            $privilegedGroups = $allDiscoveredData | Where-Object { $_._DataType -eq 'Group' -and ($_IsPrivilegedGroup -eq $true -or $_.AdminCount -eq 1) }
+            foreach ($group in $privilegedGroups) {
+                $privilegedAccounts += [PSCustomObject]@{
+                    ObjectType = 'Group'
+                    SamAccountName = $group.SamAccountName
+                    DistinguishedName = $group.DistinguishedName
+                    Reason = if ($group.AdminCount -eq 1) { "adminCount=1" } else { "Well-known privileged group" }
+                    MemberCount = $group.MemberCount
+                    GroupScope = $group.GroupScope
+                }
+            }
+
+            if ($privilegedAccounts.Count -gt 0) {
+                $privilegedAccounts | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'PrivilegedAccount' -Force }
+                $null = $allDiscoveredData.AddRange($privilegedAccounts)
+                $result.Metadata["PrivilegedAccountCount"] = $privilegedAccounts.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Identified $($privilegedAccounts.Count) privileged accounts" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to generate privileged accounts report: $($_.Exception.Message)", @{Section="PrivilegedAccounts"})
+        }
+
+        # Generate Kerberos Delegation Report (v2.0.0)
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Generating Kerberos delegation report..." -Context $Context
+            $delegationRecords = @()
+
+            # Find users with Kerberos delegation
+            $delegatedUsers = $allDiscoveredData | Where-Object { $_._DataType -eq 'User' -and $_.KerberosDelegationType -ne 'None' }
+            foreach ($user in $delegatedUsers) {
+                $delegationRecords += [PSCustomObject]@{
+                    ObjectName = $user.SamAccountName
+                    ObjectType = 'User'
+                    DelegationType = $user.KerberosDelegationType
+                    ServicePrincipalNames = $user.ServicePrincipalNames
+                    TrustedToAuthForDelegation = $user.DelegationPermitted
+                    DistinguishedName = $user.DistinguishedName
+                }
+            }
+
+            # Find computers with Kerberos delegation (server SPNs)
+            $delegatedComputers = $allDiscoveredData | Where-Object { $_._DataType -eq 'Computer' -and $_.ServicePrincipalNames -and $_.ServerRoles -ne 'None' }
+            foreach ($computer in $delegatedComputers) {
+                $delegationRecords += [PSCustomObject]@{
+                    ObjectName = $computer.Name
+                    ObjectType = 'Computer'
+                    DelegationType = 'Service Account'
+                    ServicePrincipalNames = $computer.ServicePrincipalNames
+                    ServerRoles = $computer.ServerRoles
+                    DistinguishedName = $computer.DistinguishedName
+                }
+            }
+
+            if ($delegationRecords.Count -gt 0) {
+                $delegationRecords | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'KerberosDelegation' -Force }
+                $null = $allDiscoveredData.AddRange($delegationRecords)
+                $result.Metadata["KerberosDelegationCount"] = $delegationRecords.Count
+            }
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Identified $($delegationRecords.Count) delegation configurations" -Context $Context
+        } catch {
+            $result.AddWarning("Failed to generate Kerberos delegation report: $($_.Exception.Message)", @{Section="KerberosDelegation"})
+        }
+
         # 6. EXPORT DATA TO CSV
         if ($allDiscoveredData.Count -gt 0) {
             Write-ActiveDirectoryLog -Level "INFO" -Message "?? Exporting $($allDiscoveredData.Count) records..." -Context $Context
@@ -504,6 +741,7 @@ function Invoke-ActiveDirectoryDiscovery {
                     'User' = 'ADUsers.csv'
                     'Group' = 'ADGroups.csv'
                     'GroupMember' = 'ADGroupMembers.csv'
+                    'NestedGroupMember' = 'ADNestedGroupMemberships.csv'
                     'Computer' = 'ADComputers.csv'
                     'OU' = 'ADOrganizationalUnits.csv'
                     'Trust' = 'ADTrusts.csv'
@@ -511,6 +749,8 @@ function Invoke-ActiveDirectoryDiscovery {
                     'Subnet' = 'ADSubnets.csv'
                     'FSMORole' = 'ADFSMORoles.csv'
                     'DomainController' = 'ADDomainControllers.csv'
+                    'PrivilegedAccount' = 'ADPrivilegedAccounts.csv'
+                    'KerberosDelegation' = 'ADKerberosDelegation.csv'
                 }
                 
                 $fileName = if ($fileMap.ContainsKey($dataType)) { $fileMap[$dataType] } else { "AD_$dataType.csv" }
@@ -637,7 +877,12 @@ function Get-ADUsersData {
             'Title', 'Manager', 'employeeID', 'physicalDeliveryOfficeName',
             'telephoneNumber', 'mobile', 'company', 'AccountExpirationDate',
             'PasswordLastSet', 'PasswordNeverExpires', 'CannotChangePassword',
-            'PasswordNotRequired', 'msDS-UserPasswordExpiryTimeComputed'
+            'PasswordNotRequired', 'msDS-UserPasswordExpiryTimeComputed',
+            # Security-critical attributes (v2.0.0)
+            'adminCount', 'LastLogon', 'badPwdCount', 'badPasswordTime',
+            'userAccountControl', 'objectSid', 'objectGUID', 'servicePrincipalName',
+            'msDS-SupportedEncryptionTypes', 'primaryGroupID', 'memberOf', 'LockedOut',
+            'PasswordExpired'
         )
         
         # Build filter
@@ -647,7 +892,9 @@ function Get-ADUsersData {
             "*"
         }
         
-        $adUsers = Get-ADUser -Filter $filter -Properties $userProperties @ServerParams -ErrorAction Stop
+        $adUsers = Invoke-ADCommandWithRetry -Command {
+            Get-ADUser -Filter $filter -Properties $userProperties @ServerParams -ErrorAction Stop
+        } -Context $Context
         
         foreach ($user in $adUsers) {
             $userObj = ConvertTo-UserObject -ADUser $user
@@ -670,17 +917,34 @@ function Get-ADGroupsData {
     
     $groups = [System.Collections.ArrayList]::new()
     $groupMembers = [System.Collections.ArrayList]::new()
+    $nestedGroupMembers = [System.Collections.ArrayList]::new()
     
     try {
         $groupProperties = @(
             'SamAccountName', 'Name', 'GroupCategory', 'GroupScope',
             'Description', 'DistinguishedName', 'whenCreated', 'whenChanged',
-            'mail', 'ManagedBy', 'member'
+            'mail', 'ManagedBy', 'member',
+            # Security attributes (v2.0.0)
+            'objectSid', 'objectGUID', 'adminCount', 'groupType'
         )
         
-        $adGroups = Get-ADGroup -Filter * -Properties $groupProperties @ServerParams -ErrorAction Stop
+        $adGroups = Invoke-ADCommandWithRetry -Command {
+            Get-ADGroup -Filter * -Properties $groupProperties @ServerParams -ErrorAction Stop
+        } -Context $Context
+
+        # Well-known privileged groups (v2.0.0)
+        $privilegedGroups = @(
+            'Domain Admins', 'Enterprise Admins', 'Schema Admins', 'Administrators',
+            'Account Operators', 'Backup Operators', 'Server Operators', 'Print Operators',
+            'DNSAdmins', 'Group Policy Creator Owners', 'Cryptographic Operators',
+            'Distributed COM Users', 'Network Configuration Operators', 'Performance Log Users',
+            'Performance Monitor Users', 'Remote Desktop Users', 'Replicator'
+        )
         
         foreach ($group in $adGroups) {
+            # Detect privileged groups (v2.0.0)
+            $isPrivilegedGroup = if ($group.SamAccountName -in $privilegedGroups -or $group.adminCount -eq 1) { $true } else { $false }
+
             # Add group object
             $groupObj = [PSCustomObject]@{
                 SamAccountName = $group.SamAccountName
@@ -694,6 +958,12 @@ function Get-ADGroupsData {
                 EmailAddress = $group.mail
                 ManagedBy = $group.ManagedBy
                 MemberCount = if ($group.member) { $group.member.Count } else { 0 }
+                # Security attributes (v2.0.0)
+                IsPrivilegedGroup = $isPrivilegedGroup
+                AdminCount = $group.adminCount
+                ObjectSid = $group.objectSid
+                ObjectGUID = $group.objectGUID
+                GroupType = $group.groupType
             }
             $null = $groups.Add($groupObj)
             
@@ -716,14 +986,29 @@ function Get-ADGroupsData {
                 }
             }
         }
-        
+
+        # Perform nested group membership expansion (v2.0.0)
+        Write-ActiveDirectoryLog -Message "Expanding nested group memberships..." -Level "INFO" -Context $Context
+        foreach ($group in $adGroups) {
+            try {
+                $expandedMembers = Get-ADGroupMembershipExpanded -Group $group -ServerParams $ServerParams -Context $Context
+                foreach ($member in $expandedMembers) {
+                    $null = $nestedGroupMembers.Add($member)
+                }
+            } catch {
+                Write-ActiveDirectoryLog -Message "Failed to expand nested members for group '$($group.SamAccountName)': $_" -Level "WARN" -Context $Context
+            }
+        }
+        Write-ActiveDirectoryLog -Message "Nested group expansion complete. Total memberships: $($nestedGroupMembers.Count)" -Level "SUCCESS" -Context $Context
+
     } catch {
         throw
     }
-    
+
     return @{
         Groups = $groups.ToArray()
         Members = $groupMembers.ToArray()
+        NestedMembers = $nestedGroupMembers.ToArray()
     }
 }
 
@@ -741,10 +1026,15 @@ function Get-ADComputersData {
             'Name', 'DNSHostName', 'OperatingSystem', 'OperatingSystemVersion',
             'OperatingSystemServicePack', 'Enabled', 'DistinguishedName',
             'whenCreated', 'whenChanged', 'LastLogonTimestamp', 'Description',
-            'ManagedBy', 'MemberOf'
+            'ManagedBy', 'MemberOf',
+            # Security attributes (v2.0.0)
+            'servicePrincipalName', 'badPwdCount', 'badPasswordTime',
+            'userAccountControl', 'primaryGroupID', 'objectSid', 'objectGUID'
         )
-        
-        $adComputers = Get-ADComputer -Filter * -Properties $computerProperties @ServerParams -ErrorAction Stop
+
+        $adComputers = Invoke-ADCommandWithRetry -Command {
+            Get-ADComputer -Filter * -Properties $computerProperties @ServerParams -ErrorAction Stop
+        } -Context $Context
         
         foreach ($computer in $adComputers) {
             $computerObj = ConvertTo-ComputerObject -ADComputer $computer
@@ -804,7 +1094,38 @@ function ConvertTo-UserObject {
     
     # Password expiry calculation
     $passwordExpiryDate = Get-PasswordExpiryDate -User $ADUser
-    
+
+    # Security attributes (v2.0.0)
+    $uac = $ADUser.userAccountControl
+
+    # Detect privileged accounts
+    $isPrivileged = if ($ADUser.adminCount -eq 1) { $true } else { $false }
+
+    # Calculate days since last logon
+    $lastLogon = if ($ADUser.LastLogonTimestamp) {
+        try { [DateTime]::FromFileTime($ADUser.LastLogonTimestamp) } catch { $null }
+    } else { $null }
+    $daysSinceLastLogon = if ($lastLogon) { ([DateTime]::Now - $lastLogon).Days } else { $null }
+
+    # Decode userAccountControl flags
+    $isDisabled = if ($uac -band 0x0002) { $true } else { $false }
+    $passwordNotRequired = if ($uac -band 0x0020) { $true } else { $false }
+    $dontExpirePassword = if ($uac -band 0x10000) { $true } else { $false }
+    $smartcardRequired = if ($uac -band 0x40000) { $true } else { $false }
+    $delegationPermitted = if (-not ($uac -band 0x100000)) { $true } else { $false }
+    $useDesKeyOnly = if ($uac -band 0x200000) { $true } else { $false }
+    $dontReqPreauth = if ($uac -band 0x400000) { $true } else { $false }
+
+    # Kerberos delegation type
+    $delegationType = 'None'
+    if ($ADUser.servicePrincipalName -and $uac) {
+        if ($uac -band 0x80000) {
+            $delegationType = 'Unconstrained'
+        } elseif ($uac -band 0x1000000) {
+            $delegationType = 'Constrained'
+        }
+    }
+
     return [PSCustomObject]@{
         SamAccountName = $ADUser.SamAccountName
         UserPrincipalName = $ADUser.UserPrincipalName
@@ -833,16 +1154,53 @@ function ConvertTo-UserObject {
         AccountExpirationDate = $ADUser.AccountExpirationDate
         CannotChangePassword = $ADUser.CannotChangePassword
         PasswordNotRequired = $ADUser.PasswordNotRequired
+        # Security attributes (v2.0.0)
+        IsPrivileged = $isPrivileged
+        AdminCount = $ADUser.adminCount
+        DaysSinceLastLogon = $daysSinceLastLogon
+        BadPwdCount = $ADUser.badPwdCount
+        BadPasswordTime = $ADUser.badPasswordTime
+        UserAccountControl = $uac
+        IsDisabled = $isDisabled
+        PasswordNotRequiredFlag = $passwordNotRequired
+        DontExpirePassword = $dontExpirePassword
+        SmartcardRequired = $smartcardRequired
+        DelegationPermitted = $delegationPermitted
+        UseDesKeyOnly = $useDesKeyOnly
+        DontReqPreauth = $dontReqPreauth
+        KerberosDelegationType = $delegationType
+        ServicePrincipalNames = ($ADUser.servicePrincipalName -join ';')
+        ObjectSid = $ADUser.objectSid
+        ObjectGUID = $ADUser.objectGUID
+        LockedOut = $ADUser.LockedOut
+        PasswordExpired = $ADUser.PasswordExpired
+        MemberOfCount = if ($ADUser.memberOf) { $ADUser.memberOf.Count } else { 0 }
+        MemberOfGroups = if ($ADUser.memberOf) { ($ADUser.memberOf -join ';') } else { '' }
     }
 }
 
 function ConvertTo-ComputerObject {
     param([Microsoft.ActiveDirectory.Management.ADComputer]$ADComputer)
-    
+
     $lastLogonDate = if ($ADComputer.LastLogonTimestamp -and $ADComputer.LastLogonTimestamp -gt 0) {
         try { [datetime]::FromFileTime($ADComputer.LastLogonTimestamp) } catch { $null }
     } else { $null }
-    
+
+    # Server role detection from SPNs (v2.0.0)
+    $spns = $ADComputer.servicePrincipalName
+    $roles = @()
+    if ($spns) {
+        if ($spns -match 'MSSQLSvc') { $roles += 'SQL Server' }
+        if ($spns -match 'HTTP') { $roles += 'Web Server' }
+        if ($spns -match 'TERMSRV') { $roles += 'Terminal Server' }
+        if ($spns -match 'kadmin/changepw') { $roles += 'Domain Controller' }
+        if ($spns -match 'E3514235-4B06-11D1-AB04-00C04FC2DCD2') { $roles += 'Domain Controller' }
+    }
+    $serverRoles = if ($roles.Count -gt 0) { $roles -join '; ' } else { 'None' }
+
+    # Detect if this is a server OS
+    $isServer = if ($ADComputer.OperatingSystem -match 'Server') { $true } else { $false }
+
     return [PSCustomObject]@{
         Name = $ADComputer.Name
         DNSHostName = $ADComputer.DNSHostName
@@ -857,6 +1215,15 @@ function ConvertTo-ComputerObject {
         Description = $ADComputer.Description
         ManagedBy = $ADComputer.ManagedBy
         MemberOfGroupsCount = if ($ADComputer.MemberOf) { $ADComputer.MemberOf.Count } else { 0 }
+        # Security attributes (v2.0.0)
+        IsServer = $isServer
+        ServerRoles = $serverRoles
+        ServicePrincipalNames = ($spns -join ';')
+        BadPwdCount = $ADComputer.badPwdCount
+        BadPasswordTime = $ADComputer.badPasswordTime
+        UserAccountControl = $ADComputer.userAccountControl
+        ObjectSid = $ADComputer.objectSid
+        ObjectGUID = $ADComputer.objectGUID
     }
 }
 
